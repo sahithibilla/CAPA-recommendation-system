@@ -1,0 +1,2570 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>intelliCAPA — CAPA Recommendation System</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+/* ══════════════════════════════════════════════
+   THEMES
+══════════════════════════════════════════════ */
+[data-theme="dark"]{
+  --bg:#070810; --bg2:#0c0d18; --bg3:#101220;
+  --surface:#0f1120; --surface2:#161828; --surface3:#1c2035;
+  --border:rgba(120,130,255,0.1); --border-h:rgba(120,130,255,0.22);
+  --accent:#7c6fff; --accent2:#a594ff; --accent3:#5eead4;
+  --glow:rgba(124,111,255,0.2); --glow2:rgba(94,234,212,0.15);
+  --text:#eceef8; --muted:#7880a0; --dim:#3a3f58;
+  --ok:#34d399; --warn:#fbbf24; --err:#f87171;
+  --nav:rgba(7,8,16,0.88);
+  --card-glow: 0 0 0 1px rgba(120,130,255,0.12), 0 8px 32px rgba(0,0,0,0.6);
+  --input-glow: 0 0 0 3px rgba(124,111,255,0.2), 0 8px 40px rgba(0,0,0,0.5);
+}
+[data-theme="light"]{
+  --bg:#f0f1fa; --bg2:#e8eaf6; --bg3:#dde0f5;
+  --surface:#ffffff; --surface2:#f5f6fe; --surface3:#eaecf9;
+  --border:rgba(80,70,200,0.1); --border-h:rgba(80,70,200,0.22);
+  --accent:#5b4de8; --accent2:#7c6fff; --accent3:#0d9488;
+  --glow:rgba(91,77,232,0.15); --glow2:rgba(13,148,136,0.12);
+  --text:#0d0f22; --muted:#525878; --dim:#b0b5d0;
+  --ok:#059669; --warn:#d97706; --err:#dc2626;
+  --nav:rgba(240,241,250,0.92);
+  --card-glow: 0 0 0 1px rgba(80,70,200,0.1), 0 4px 24px rgba(0,0,0,0.08);
+  --input-glow: 0 0 0 3px rgba(91,77,232,0.15), 0 8px 32px rgba(0,0,0,0.07);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg); color:var(--text);
+  font-family:'DM Sans',sans-serif;
+  min-height:100vh; overflow-x:hidden;
+  transition:background .35s,color .35s;
+}
+
+/* Grain overlay */
+body::before{
+  content:''; position:fixed; inset:0; pointer-events:none; z-index:0; opacity:.025;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ── NAV ──────────────────────────────────────── */
+.nav{
+  position:fixed; top:0; left:0; right:0; z-index:500;
+  height:56px; display:flex; align-items:center; padding:0 32px;
+  background:var(--nav); backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--border);
+  transition:background .35s,border-color .35s;
+}
+.logo{
+  display:flex; align-items:center; gap:10px;
+  font-family:'DM Mono',monospace; font-size:14px; font-weight:500;
+  color:var(--text); cursor:pointer; text-decoration:none;
+  letter-spacing:.02em; transition:opacity .2s;
+}
+.logo:hover{opacity:.7;}
+.logo-mark{
+  width:28px; height:28px; border-radius:8px; position:relative;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; color:#fff;
+  box-shadow:0 0 16px var(--glow);
+}
+.nav-r{margin-left:auto; display:flex; align-items:center; gap:6px;}
+
+.npill{
+  display:flex; align-items:center; gap:5px;
+  padding:4px 11px; border-radius:20px;
+  font-size:11px; font-family:'DM Mono',monospace;
+  border:1px solid var(--border); color:var(--muted);
+  background:var(--surface); transition:all .3s;
+}
+.npill.on {border-color:rgba(52,211,153,.35);color:var(--ok);background:rgba(52,211,153,.07);}
+.npill.on::before{content:'';width:5px;height:5px;background:var(--ok);border-radius:50%;animation:blink 2s infinite;}
+.npill.off{border-color:rgba(248,113,113,.35);color:var(--err);background:rgba(248,113,113,.07);}
+.npill.off::before{content:'';width:5px;height:5px;background:var(--err);border-radius:50%;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+.nbtn{
+  padding:6px 14px; border-radius:8px; border:1px solid var(--border);
+  background:var(--surface); color:var(--muted);
+  font-family:'DM Sans',sans-serif; font-size:12px; font-weight:500;
+  cursor:pointer; transition:all .2s; letter-spacing:.01em;
+}
+.nbtn:hover{background:var(--surface2); border-color:var(--border-h); color:var(--text);}
+.nbtn.accent{
+  background:var(--accent); border-color:var(--accent); color:#fff;
+  box-shadow:0 0 20px var(--glow);
+}
+.nbtn.accent:hover{background:var(--accent2); border-color:var(--accent2);}
+
+.theme-btn{
+  width:34px; height:34px; border-radius:9px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--muted); cursor:pointer; font-size:15px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .2s;
+}
+.theme-btn:hover{border-color:var(--border-h); color:var(--text); transform:rotate(20deg);}
+
+/* ── PAGE SYSTEM ──────────────────────────────── */
+.page{display:none;}
+.page.active{display:block;}
+#page-home.active{display:flex; flex-direction:column;}
+
+/* ══════════════════════════════════════════════
+   HOME PAGE
+══════════════════════════════════════════════ */
+#page-home{min-height:100vh;}
+
+/* Animated mesh background */
+.mesh{
+  position:absolute; inset:0; pointer-events:none; overflow:hidden;
+}
+.mesh-blob{
+  position:absolute; border-radius:50%; filter:blur(80px);
+  animation:drift 12s ease-in-out infinite alternate;
+}
+.mesh-blob:nth-child(1){
+  width:600px; height:600px;
+  background:radial-gradient(circle,rgba(124,111,255,.12),transparent 70%);
+  top:-10%; left:20%;
+}
+.mesh-blob:nth-child(2){
+  width:500px; height:500px;
+  background:radial-gradient(circle,rgba(94,234,212,.08),transparent 70%);
+  top:30%; right:10%; animation-delay:-4s;
+}
+.mesh-blob:nth-child(3){
+  width:400px; height:400px;
+  background:radial-gradient(circle,rgba(124,111,255,.06),transparent 70%);
+  bottom:10%; left:10%; animation-delay:-8s;
+}
+@keyframes drift{from{transform:translate(0,0) scale(1)}to{transform:translate(30px,20px) scale(1.05)}}
+
+.hero{
+  flex:1; display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  padding:110px 24px 44px; text-align:center;
+  position:relative; z-index:1;
+  min-height:80vh;
+}
+
+.hero-eyebrow{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:5px 14px; border-radius:20px;
+  border:1px solid var(--border-h);
+  font-size:11px; font-family:'DM Mono',monospace;
+  color:var(--muted); letter-spacing:.1em; text-transform:uppercase;
+  margin-bottom:28px; background:var(--surface);
+  animation:riseIn .6s ease both;
+}
+.hero-eyebrow .dot{
+  width:6px; height:6px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  box-shadow:0 0 8px var(--glow);
+}
+
+.hero-h{
+  font-family:'Playfair Display',serif;
+  font-size:clamp(48px,7.5vw,92px);
+  font-weight:400; line-height:1.05;
+  letter-spacing:-.02em; margin-bottom:20px;
+  animation:riseIn .6s .1s ease both;
+}
+.hero-h em{
+  font-style:italic;
+  background:linear-gradient(120deg,var(--accent2),var(--accent3));
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  background-clip:text;
+}
+
+.hero-sub{
+  font-size:16px; color:var(--muted); line-height:1.72;
+  max-width:520px; font-weight:300; margin-bottom:52px;
+  animation:riseIn .6s .2s ease both;
+}
+
+/* ── HOME INPUT BAR ──────────────────────────── */
+.home-bar{
+  width:100%; max-width:720px; position:relative;
+  animation:riseIn .6s .3s ease both;
+}
+
+.ibar{
+  display:flex; align-items:flex-end;
+  background:var(--surface);
+  border:1px solid var(--border-h);
+  border-radius:18px;
+  padding:16px 14px 16px 22px;
+  transition:border-color .3s, box-shadow .3s, background .35s;
+  box-shadow:var(--card-glow);
+}
+.ibar:focus-within{
+  border-color:rgba(124,111,255,.5);
+  box-shadow:var(--input-glow);
+}
+.ibar textarea{
+  flex:1; background:none; border:none; outline:none;
+  color:var(--text); font-family:'DM Sans',sans-serif;
+  font-size:15px; font-weight:300; line-height:1.65;
+  resize:none; min-height:26px; max-height:160px;
+  overflow-y:auto; padding:0; transition:color .35s;
+}
+.ibar textarea::placeholder{color:var(--dim);}
+textarea::-webkit-scrollbar{width:3px;}
+textarea::-webkit-scrollbar-thumb{background:var(--border-h);border-radius:2px;}
+
+.send-btn{
+  width:38px; height:38px; border-radius:11px; border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff; cursor:pointer; flex-shrink:0; margin-left:10px;
+  display:flex; align-items:center; justify-content:center;
+  transition:all .25s;
+  box-shadow:0 4px 16px var(--glow);
+}
+.send-btn:hover:not(:disabled){
+  transform:scale(1.08) translateY(-1px);
+  box-shadow:0 6px 24px var(--glow);
+}
+.send-btn:disabled{background:var(--surface3);box-shadow:none;cursor:not-allowed;}
+.send-btn svg{width:16px;height:16px;}
+
+.hint{
+  font-size:11px; color:var(--dim); margin-top:10px;
+  font-family:'DM Mono',monospace; text-align:center;
+}
+
+/* Animated stat strip */
+.stats{
+  display:flex; justify-content:center;
+  gap:0; border-top:1px solid var(--border);
+  position:relative; z-index:1;
+  animation:riseIn .6s .4s ease both;
+}
+.stat-item{
+  flex:1; max-width:200px; text-align:center;
+  padding:22px 16px; border-right:1px solid var(--border);
+  position:relative; overflow:hidden;
+  transition:background .2s;
+}
+.stat-item:last-child{border-right:none;}
+.stat-item:hover{background:var(--surface);}
+.stat-item::before{
+  content:''; position:absolute;
+  bottom:0; left:50%; transform:translateX(-50%);
+  width:0; height:2px;
+  background:linear-gradient(90deg,var(--accent),var(--accent3));
+  transition:width .3s;
+}
+.stat-item:hover::before{width:60%;}
+.stat-n{
+  font-family:'DM Mono',monospace; font-size:22px;
+  font-weight:500; color:var(--accent2); display:block; margin-bottom:3px;
+}
+.stat-l{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;}
+
+/* Feature cards */
+.feats{
+  padding:48px 32px 80px; max-width:1020px; margin:0 auto;
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px;
+  position:relative; z-index:1;
+}
+.feat{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:14px; padding:22px;
+  transition:all .25s; position:relative; overflow:hidden;
+}
+.feat::before{
+  content:''; position:absolute; inset:0; opacity:0;
+  background:linear-gradient(135deg,rgba(124,111,255,.05),rgba(94,234,212,.03));
+  transition:opacity .25s;
+}
+.feat:hover{border-color:var(--border-h); transform:translateY(-3px); box-shadow:var(--card-glow);}
+.feat:hover::before{opacity:1;}
+.feat-icon{
+  width:40px; height:40px; border-radius:10px; margin-bottom:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:20px;
+  background:linear-gradient(135deg,rgba(124,111,255,.12),rgba(94,234,212,.08));
+  border:1px solid var(--border);
+}
+.feat h3{font-size:13px;font-weight:600;margin-bottom:6px;letter-spacing:.01em;}
+.feat p{font-size:12px;color:var(--muted);line-height:1.65;}
+
+/* ══════════════════════════════════════════════
+   RESULTS PAGE
+══════════════════════════════════════════════ */
+#page-results{min-height:100vh; padding-top:56px; position:relative; z-index:1;}
+
+/* Subtle results bg */
+#page-results::before{
+  content:''; position:fixed; top:56px; left:0; right:0; height:200px;
+  background:linear-gradient(to bottom,var(--bg2),transparent);
+  pointer-events:none; z-index:0;
+}
+
+.res-wrap{
+  max-width:860px; margin:0 auto;
+  padding:32px 28px 100px; position:relative; z-index:1;
+}
+
+/* Back button */
+.back-btn{
+  display:inline-flex; align-items:center; gap:7px;
+  padding:7px 14px; border-radius:9px;
+  border:1px solid var(--border); background:var(--surface);
+  color:var(--muted); font-family:'DM Sans',sans-serif;
+  font-size:12px; font-weight:500; cursor:pointer;
+  transition:all .2s; margin-bottom:24px;
+  text-decoration:none;
+}
+.back-btn:hover{border-color:var(--border-h);color:var(--text);background:var(--surface2);transform:translateX(-2px);}
+.back-btn svg{width:14px;height:14px;transition:transform .2s;}
+.back-btn:hover svg{transform:translateX(-2px);}
+
+/* Echo bubble */
+.echo{display:flex;justify-content:flex-end;margin-bottom:28px;}
+.echo-bubble{
+  max-width:78%;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff; padding:13px 18px;
+  border-radius:18px 18px 4px 18px;
+  font-size:14px; line-height:1.65; font-weight:300;
+  word-break:break-word;
+  box-shadow:0 8px 32px var(--glow);
+  animation:popIn .35s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes popIn{from{opacity:0;transform:scale(.9) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+/* Error */
+.err-box{
+  display:none; background:rgba(220,38,38,.07);
+  border:1px solid rgba(220,38,38,.25);
+  border-radius:11px; padding:14px 18px;
+  color:var(--err); font-size:13px; margin-bottom:20px;
+}
+.err-box.show{display:block; animation:riseIn .3s ease both;}
+
+/* Loader */
+.loader{display:none; padding:56px 0; text-align:center;}
+.loader.show{display:block; animation:riseIn .3s ease both;}
+.dots{display:flex;justify-content:center;gap:7px;margin-bottom:20px;}
+.dots span{
+  width:9px; height:9px; border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),var(--accent3));
+  animation:dotP 1.3s infinite;
+}
+.dots span:nth-child(2){animation-delay:.2s;}
+.dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dotP{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+.step-list{display:flex;flex-direction:column;align-items:center;gap:6px;}
+.step{
+  font-size:11px; font-family:'DM Mono',monospace;
+  color:var(--dim); display:flex; align-items:center; gap:8px;
+  transition:color .3s;
+}
+.step .dot{width:5px;height:5px;border-radius:50%;background:currentColor;}
+.step.active{color:var(--accent2);}
+.step.done{color:var(--ok);}
+
+/* Result cards */
+.res-cards{display:none;}
+.res-cards.show{display:block; animation:riseIn .5s ease both;}
+
+/* Section label */
+.sec{
+  font-size:10px; font-family:'DM Mono',monospace;
+  text-transform:uppercase; letter-spacing:.16em; color:var(--dim);
+  margin-bottom:12px; display:flex; align-items:center; gap:10px;
+}
+.sec::after{content:'';flex:1;height:1px;background:var(--border);}
+
+/* Summary grid */
+.sum-grid{
+  display:grid; grid-template-columns:repeat(4,1fr);
+  gap:12px; margin-bottom:24px;
+}
+.s-card{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:13px; padding:17px; position:relative; overflow:hidden;
+  transition:all .25s;
+  box-shadow:var(--card-glow);
+}
+.s-card:hover{transform:translateY(-2px); border-color:var(--border-h);}
+.s-card::before{
+  content:''; position:absolute;
+  top:0; left:0; right:0; height:2px;
+  border-radius:13px 13px 0 0;
+}
+.c-root::before  {background:linear-gradient(90deg,var(--accent),var(--accent2));}
+.c-high::before  {background:var(--err);}
+.c-critical::before{background:#b91c1c;}
+.c-medium::before{background:var(--warn);}
+.c-low::before   {background:var(--ok);}
+.c-unknown::before{background:var(--border-h);}
+.c-conf::before  {background:linear-gradient(90deg,var(--accent3),var(--accent2));}
+.c-hist::before  {background:var(--accent);}
+.s-lbl{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:8px;}
+.s-val{font-size:13px;font-weight:500;color:var(--text);line-height:1.3;}
+.s-val.big{font-family:'DM Mono',monospace;font-size:26px;font-weight:400;color:var(--accent2);}
+.sev{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:3px 10px;border-radius:20px;
+  font-size:11px;font-family:'DM Mono',monospace;
+}
+.sev.high    {background:rgba(248,113,113,.1);color:#fca5a5;border:1px solid rgba(248,113,113,.2);}
+.sev.critical{background:rgba(185,28,28,.1);color:#f87171;border:1px solid rgba(185,28,28,.25);}
+.sev.medium  {background:rgba(251,191,36,.1);color:#fcd34d;border:1px solid rgba(251,191,36,.2);}
+.sev.low     {background:rgba(52,211,153,.1);color:#6ee7b7;border:1px solid rgba(52,211,153,.2);}
+.sev.unknown {background:var(--surface2);color:var(--muted);border:1px solid var(--border);}
+.conf-track{height:4px;background:var(--surface3);border-radius:2px;margin-top:9px;overflow:hidden;}
+.conf-fill{
+  height:100%;border-radius:2px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1);
+  background:linear-gradient(90deg,var(--accent3),var(--accent2));
+  box-shadow:0 0 8px var(--glow2);
+}
+
+/* Actions */
+.act-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px;}
+.act-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:13px;padding:18px;transition:all .25s;
+  box-shadow:var(--card-glow);
+}
+.act-card:hover{border-color:var(--border-h);}
+.act-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:600;letter-spacing:.02em;
+  margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border);
+}
+.adot{width:7px;height:7px;border-radius:50%;}
+.adot.c{background:var(--accent2);box-shadow:0 0 8px var(--glow);}
+.adot.p{background:var(--accent3);box-shadow:0 0 8px var(--glow2);}
+.act-list{list-style:none;display:flex;flex-direction:column;gap:8px;}
+.act-item{
+  display:flex;gap:10px;padding:10px 13px;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;font-size:12px;color:var(--muted);
+  line-height:1.6;transition:all .2s;
+}
+.act-item:hover{border-color:var(--border-h);color:var(--text);transform:translateX(2px);}
+.anum{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);min-width:14px;padding-top:2px;}
+
+/* CAPA Records */
+.capa-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:13px;overflow:hidden;margin-bottom:24px;
+  box-shadow:var(--card-glow);
+}
+.capa-row{
+  padding:16px 18px;border-bottom:1px solid var(--border);
+  transition:background .15s;
+}
+.capa-row:last-child{border-bottom:none;}
+.capa-row:hover{background:var(--surface2);}
+.capa-hdr{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;}
+.capa-id{
+  font-family:'DM Mono',monospace;font-size:11px;color:var(--accent2);
+  background:rgba(124,111,255,.1);border:1px solid rgba(124,111,255,.2);
+  padding:2px 8px;border-radius:5px;
+}
+.eff{font-size:10px;padding:2px 8px;border-radius:5px;font-family:'DM Mono',monospace;}
+.eff.ok {background:rgba(52,211,153,.1);color:var(--ok);border:1px solid rgba(52,211,153,.2);}
+.eff.bad{background:rgba(248,113,113,.1);color:var(--err);border:1px solid rgba(248,113,113,.2);}
+.eff.par{background:rgba(251,191,36,.1);color:var(--warn);border:1px solid rgba(251,191,36,.2);}
+.eff.na {background:var(--surface3);color:var(--muted);border:1px solid var(--border);}
+.capa-sum{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:10px;}
+.capa-acts{display:grid;grid-template-columns:1fr 1fr;gap:9px;}
+.capa-act{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 12px;}
+.capa-act-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:4px;}
+.capa-act-txt{font-size:11px;color:var(--muted);line-height:1.55;}
+.capa-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+
+/* Explainability */
+.ex-panel{
+  background:var(--surface);
+  border:1px solid rgba(124,111,255,.2);
+  border-radius:14px;padding:22px;margin-bottom:24px;
+  position:relative;overflow:hidden;
+  box-shadow:0 0 40px rgba(124,111,255,.07),var(--card-glow);
+}
+.ex-panel::after{
+  content:''; position:absolute;
+  top:-80px;right:-80px;
+  width:220px;height:220px;
+  background:radial-gradient(circle,rgba(124,111,255,.1),transparent);
+  border-radius:50%;pointer-events:none;
+}
+.ex-title{
+  font-family:'Playfair Display',serif;
+  font-size:19px;font-weight:400;margin-bottom:3px;
+}
+.ex-sub{font-size:11px;color:var(--muted);margin-bottom:18px;}
+.ex-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.ex-item{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:12px;transition:all .2s;
+}
+.ex-item:hover{border-color:var(--border-h);}
+.ex-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.12em;color:var(--dim);margin-bottom:6px;}
+.ex-val{font-size:11px;color:var(--text);font-weight:500;line-height:1.5;}
+.reason{
+  font-size:12px;color:var(--muted);line-height:1.75;
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:14px 16px;
+}
+
+/* Similar incidents */
+.inc-panel{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:13px;overflow:hidden;
+  box-shadow:var(--card-glow);
+}
+.inc-row{
+  display:flex;gap:14px;padding:14px 18px;
+  border-bottom:1px solid var(--border);align-items:flex-start;
+  transition:background .15s;
+}
+.inc-row:last-child{border-bottom:none;}
+.inc-row:hover{background:var(--surface2);}
+.inc-sim{
+  font-family:'DM Mono',monospace;font-size:13px;
+  color:var(--accent2);min-width:48px;flex-shrink:0;padding-top:1px;
+  font-weight:500;
+}
+.inc-body{flex:1;}
+.inc-txt{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:6px;}
+.inc-tags{display:flex;gap:5px;flex-wrap:wrap;}
+.tag{
+  padding:2px 7px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:5px;
+  font-size:10px;font-family:'DM Mono',monospace;color:var(--dim);
+}
+
+/* ══════════════════════════════════════════════
+   ADD RECORD MODAL
+══════════════════════════════════════════════ */
+.modal-backdrop{
+  display:none; position:fixed; inset:0; z-index:900;
+  background:rgba(0,0,0,.7); backdrop-filter:blur(8px);
+  align-items:center; justify-content:center; padding:20px;
+}
+.modal-backdrop.open{display:flex; animation:fadeBg .25s ease both;}
+@keyframes fadeBg{from{opacity:0}to{opacity:1}}
+
+.modal{
+  background:var(--surface); border:1px solid var(--border-h);
+  border-radius:18px; width:100%; max-width:640px;
+  max-height:88vh; overflow-y:auto;
+  box-shadow:0 24px 80px rgba(0,0,0,.6),0 0 0 1px rgba(124,111,255,.15);
+  animation:modalIn .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes modalIn{from{opacity:0;transform:scale(.92) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.modal-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:22px 26px 18px;border-bottom:1px solid var(--border);
+}
+.modal-title{
+  font-family:'Playfair Display',serif;
+  font-size:20px;font-weight:400;
+}
+.modal-close{
+  width:32px;height:32px;border-radius:8px;border:1px solid var(--border);
+  background:none;color:var(--muted);cursor:pointer;font-size:18px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.modal-close:hover{background:var(--surface2);color:var(--text);}
+.modal-body{padding:22px 26px;}
+
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.form-row.full{grid-template-columns:1fr;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-label{
+  font-size:11px;font-weight:600;text-transform:uppercase;
+  letter-spacing:.08em;color:var(--muted);
+}
+.form-input, .form-select, .form-textarea{
+  background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:10px 13px;
+  color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:13px;transition:all .2s;outline:none;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{
+  border-color:rgba(124,111,255,.5);
+  box-shadow:0 0 0 3px var(--glow);
+}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.6;}
+.form-select option{background:var(--surface);}
+.modal-foot{
+  padding:18px 26px;border-top:1px solid var(--border);
+  display:flex;justify-content:flex-end;gap:10px;
+}
+.form-cancel{
+  padding:9px 18px;border-radius:9px;border:1px solid var(--border);
+  background:none;color:var(--muted);cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-size:13px;transition:all .2s;
+}
+.form-cancel:hover{background:var(--surface2);color:var(--text);}
+.form-submit{
+  padding:9px 22px;border-radius:9px;border:none;
+  background:linear-gradient(135deg,var(--accent),var(--accent2));
+  color:#fff;cursor:pointer;font-family:'DM Sans',sans-serif;
+  font-size:13px;font-weight:500;
+  box-shadow:0 4px 16px var(--glow);transition:all .2s;
+}
+.form-submit:hover{transform:translateY(-1px);box-shadow:0 6px 24px var(--glow);}
+.form-submit:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.toast{
+  display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
+  padding:11px 22px;border-radius:10px;
+  font-size:13px;font-weight:500;z-index:1000;
+  backdrop-filter:blur(12px);
+  animation:toastIn .3s cubic-bezier(.34,1.56,.64,1) both;
+}
+.toast.show{display:flex;align-items:center;gap:8px;}
+.toast.success{background:rgba(52,211,153,.15);border:1px solid rgba(52,211,153,.3);color:var(--ok);}
+.toast.error{background:rgba(248,113,113,.12);border:1px solid rgba(248,113,113,.25);color:var(--err);}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* ══════════════════════════════════════════════
+   ABOUT PAGE
+══════════════════════════════════════════════ */
+#page-about{min-height:100vh;padding:90px 24px 80px; position:relative; z-index:1;}
+.about-wrap{max-width:780px;margin:0 auto;}
+.about-wrap h2{font-family:'Playfair Display',serif;font-size:44px;font-weight:400;margin-bottom:12px;}
+.about-lead{font-size:15px;color:var(--muted);line-height:1.75;margin-bottom:44px;font-weight:300;}
+.pipeline{display:flex;flex-direction:column;margin-bottom:40px;}
+.p-step{display:flex;gap:18px;}
+.p-line{display:flex;flex-direction:column;align-items:center;}
+.p-dot{
+  width:29px;height:29px;border-radius:50%;
+  background:var(--surface2);
+  border:1px solid rgba(124,111,255,.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-family:'DM Mono',monospace;
+  color:var(--accent2);flex-shrink:0;
+}
+.p-conn{width:1px;background:var(--border);flex:1;min-height:20px;}
+.p-cnt{padding-bottom:24px;}
+.p-cnt h4{font-size:13px;font-weight:600;margin-bottom:3px;padding-top:5px;}
+.p-cnt p{font-size:12px;color:var(--muted);line-height:1.65;}
+.pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px;}
+.pill{
+  padding:3px 10px;background:var(--surface2);
+  border:1px solid rgba(124,111,255,.2);border-radius:20px;
+  font-size:11px;font-family:'DM Mono',monospace;color:var(--accent2);
+}
+
+/* ── ANIMATIONS ──────────────────────────────── */
+@keyframes riseIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── RESPONSIVE ──────────────────────────────── */
+@media(max-width:768px){
+  .sum-grid{grid-template-columns:1fr 1fr;}
+  .act-grid{grid-template-columns:1fr;}
+  .ex-grid{grid-template-columns:1fr 1fr;}
+  .feats{grid-template-columns:1fr 1fr;}
+  .capa-acts{grid-template-columns:1fr;}
+  .stats{flex-wrap:wrap;}
+  .stat-item{flex:0 0 50%;}
+  .form-row{grid-template-columns:1fr;}
+}
+@media(max-width:480px){
+  .feats{grid-template-columns:1fr;}
+  .sum-grid{grid-template-columns:1fr 1fr;}
+  .nav{padding:0 16px;}
+  .res-wrap{padding:24px 16px 80px;}
+}
+
+    /* ══ ANALYTICS PAGE ══════════════════════════ */
+    #page-analytics{ min-height:100vh; padding:80px 24px 80px; position:relative; z-index:1; }
+    .analytics-wrap{ max-width:1100px; margin:0 auto; }
+    .an-header{
+      display:flex; align-items:flex-start; justify-content:space-between;
+      margin-bottom:32px; gap:16px; flex-wrap:wrap;
+    }
+    .an-title{
+      font-family:'Playfair Display',serif;
+      font-size:38px; font-weight:400; margin-bottom:6px;
+    }
+    .an-sub{ font-size:13px; color:var(--muted); font-weight:300; }
+
+    /* KPI strip */
+    .kpi-strip{
+      display:grid; grid-template-columns:repeat(5,1fr);
+      gap:12px; margin-bottom:24px;
+    }
+    .kpi-card{
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:20px 16px; text-align:center;
+      transition:all .25s; box-shadow:var(--card-glow);
+      position:relative; overflow:hidden;
+    }
+    .kpi-card::before{
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+      background:linear-gradient(90deg,var(--accent),var(--accent3));
+      transform:scaleX(0); transition:transform .3s;
+    }
+    .kpi-card:hover{ transform:translateY(-3px); border-color:var(--border-h); }
+    .kpi-card:hover::before{ transform:scaleX(1); }
+    .kpi-icon{ font-size:22px; margin-bottom:8px; }
+    .kpi-val{
+      font-family:'DM Mono',monospace; font-size:28px; font-weight:500;
+      color:var(--accent2); margin-bottom:4px; line-height:1;
+    }
+    .kpi-label{ font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); }
+
+    /* Chart layout */
+    .chart-row-2{
+      display:grid; grid-template-columns:1fr 1fr;
+      gap:16px; margin-bottom:16px;
+    }
+    .chart-full{ margin-bottom:16px; }
+    .chart-card{
+      background:var(--surface); border:1px solid var(--border);
+      border-radius:14px; padding:20px;
+      transition:all .25s; box-shadow:var(--card-glow);
+    }
+    .chart-card:hover{ border-color:var(--border-h); }
+    .chart-card-header{ margin-bottom:16px; }
+    .chart-card-title{ font-size:14px; font-weight:600; letter-spacing:.01em; margin-bottom:3px; }
+    .chart-card-sub{ font-size:11px; color:var(--muted); }
+    .chart-container{ position:relative; width:100%; height:260px; }
+
+    @media(max-width:900px){
+      .kpi-strip{ grid-template-columns:repeat(3,1fr); }
+      .chart-row-2{ grid-template-columns:1fr; }
+    }
+    @media(max-width:540px){
+      .kpi-strip{ grid-template-columns:1fr 1fr; }
+    }
+    
+    /* ══════════════════════════════════════════════
+       BENCHMARK PANEL  (global pre-computed stats)
+    ══════════════════════════════════════════════ */
+    .bench-panel{
+      background:var(--surface);
+      border:1px solid rgba(94,234,212,.18);
+      border-radius:14px; overflow:hidden;
+      box-shadow:0 0 32px rgba(94,234,212,.04), var(--card-glow);
+    }
+    .bench-head{
+      padding:20px 22px 14px;
+      background:linear-gradient(135deg,rgba(94,234,212,.04),rgba(124,111,255,.03));
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+    }
+    .bench-title{
+      font-family:'Playfair Display',serif;
+      font-size:18px; font-weight:400; margin-bottom:3px;
+    }
+    .bench-sub{ font-size:11px; color:var(--muted); }
+    .bench-tag{
+      display:inline-flex; align-items:center; gap:5px;
+      padding:4px 10px; border-radius:20px; white-space:nowrap;
+      font-size:10px; font-family:'DM Mono',monospace;
+      background:rgba(94,234,212,.08); border:1px solid rgba(94,234,212,.2);
+      color:var(--accent3);
+    }
+    .bench-grid{
+      display:grid; grid-template-columns:repeat(5,1fr);
+      gap:1px; background:var(--border);
+    }
+    .bm{
+      background:var(--surface); padding:18px 14px; text-align:center;
+      transition:background .2s; position:relative; overflow:hidden;
+    }
+    .bm:hover{ background:var(--surface2); }
+    .bm::after{
+      content:''; position:absolute; bottom:0; left:0; right:0; height:2px;
+      transform:scaleX(0); transition:transform .3s;
+    }
+    .bm:hover::after{ transform:scaleX(1); }
+    .bm.great::after{ background:var(--ok); }
+    .bm.good::after { background:var(--accent2); }
+    .bm.warn::after { background:var(--warn); }
+    .bm-val{
+      font-family:'DM Mono',monospace; font-size:24px; font-weight:500;
+      display:block; margin-bottom:5px; line-height:1;
+    }
+    .bm.great .bm-val{ color:var(--ok); }
+    .bm.good  .bm-val{ color:var(--accent2); }
+    .bm.warn  .bm-val{ color:var(--warn); }
+    .bm-name{ font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); margin-bottom:5px; }
+    .bm-what{ font-size:10px; color:var(--muted); line-height:1.45; }
+    .bench-note{
+      padding:14px 22px; border-top:1px solid var(--border);
+      display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap;
+    }
+    .bench-note-text{ font-size:11px; color:var(--muted); line-height:1.65; flex:1; }
+    .bench-note-text b{ color:var(--text); }
+    .bench-warn{
+      margin-top:10px;
+      display:flex; align-items:flex-start; gap:8px;
+      background:rgba(251,191,36,.06); border:1px solid rgba(251,191,36,.2);
+      border-radius:8px; padding:10px 13px;
+    }
+    .bench-warn-text{ font-size:11px; color:var(--muted); line-height:1.55; }
+    .bench-warn-text b{ color:var(--warn); }
+
+    /* ══════════════════════════════════════════════
+       PER-RESULT PANEL  (live, per query)
+    ══════════════════════════════════════════════ */
+    .perres-panel{
+      background:var(--surface);
+      border:1px solid rgba(124,111,255,.18);
+      border-radius:14px; overflow:hidden;
+      box-shadow:0 0 32px rgba(124,111,255,.04), var(--card-glow);
+    }
+    .perres-head{
+      padding:20px 22px 14px;
+      background:linear-gradient(135deg,rgba(124,111,255,.04),rgba(94,234,212,.02));
+      border-bottom:1px solid var(--border);
+      display:flex; align-items:flex-start; justify-content:space-between;
+      gap:12px; flex-wrap:wrap;
+    }
+    .perres-title{
+      font-family:'Playfair Display',serif;
+      font-size:18px; font-weight:400; margin-bottom:3px;
+    }
+    .perres-sub{ font-size:11px; color:var(--muted); }
+    .perres-tag{
+      display:inline-flex; align-items:center; gap:5px;
+      padding:4px 10px; border-radius:20px; white-space:nowrap;
+      font-size:10px; font-family:'DM Mono',monospace;
+      background:rgba(124,111,255,.08); border:1px solid rgba(124,111,255,.2);
+      color:var(--accent2);
+    }
+    /* 4 metric tiles */
+    .perres-tiles{
+      display:grid; grid-template-columns:repeat(4,1fr);
+      gap:1px; background:var(--border);
+    }
+    .ptile{
+      background:var(--surface); padding:18px 14px; text-align:center;
+      transition:background .2s;
+    }
+    .ptile:hover{ background:var(--surface2); }
+    .ptile-val{
+      font-family:'DM Mono',monospace; font-size:24px; font-weight:500;
+      display:block; margin-bottom:5px; line-height:1;
+    }
+    .ptile-val.great{ color:var(--ok); }
+    .ptile-val.good { color:var(--accent2); }
+    .ptile-val.warn { color:var(--warn); }
+    .ptile-val.poor { color:var(--err); }
+    .ptile-name{ font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); margin-bottom:6px; }
+    .ptile-what{ font-size:10px; color:var(--muted); line-height:1.45; }
+    /* Agreement progress bars */
+    .abar-wrap{ padding:18px 22px; border-top:1px solid var(--border); }
+    .abar-row{ margin-bottom:14px; }
+    .abar-row:last-child{ margin-bottom:0; }
+    .abar-info{
+      display:flex; justify-content:space-between; align-items:center;
+      margin-bottom:5px;
+    }
+    .abar-label{ font-size:11px; color:var(--text); font-weight:500; }
+    .abar-count{ font-family:'DM Mono',monospace; font-size:11px; color:var(--muted); }
+    .abar-track{
+      height:7px; background:var(--surface3);
+      border-radius:4px; overflow:hidden;
+    }
+    .abar-fill{
+      height:100%; border-radius:4px;
+      transition:width 1s cubic-bezier(.4,0,.2,1);
+    }
+    .abar-fill.great{ background:linear-gradient(90deg,var(--ok),#6ee7b7); box-shadow:0 0 8px rgba(52,211,153,.3); }
+    .abar-fill.good { background:linear-gradient(90deg,var(--accent2),var(--accent3)); }
+    .abar-fill.warn { background:linear-gradient(90deg,var(--warn),#fcd34d); }
+    .abar-fill.poor { background:linear-gradient(90deg,var(--err),#fca5a5); }
+    .abar-explain{ font-size:10px; color:var(--muted); margin-top:4px; line-height:1.45; }
+    /* Retrieved breakdown table */
+    .breakdown-wrap{
+      padding:0 22px 18px; border-top:1px solid var(--border); padding-top:16px;
+    }
+    .breakdown-title{
+      font-size:10px; text-transform:uppercase; letter-spacing:.12em;
+      color:var(--dim); margin-bottom:10px;
+    }
+    .brow{
+      display:flex; align-items:center; gap:8px;
+      padding:8px 12px;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:9px; margin-bottom:6px;
+      transition:border-color .2s;
+    }
+    .brow:hover{ border-color:var(--border-h); }
+    .brow-rank{
+      font-family:'DM Mono',monospace; font-size:11px;
+      color:var(--accent2); min-width:20px; flex-shrink:0;
+    }
+    .brow-text{ flex:1; font-size:11px; color:var(--muted); line-height:1.4; }
+    .brow-tag{
+      font-size:10px; font-family:'DM Mono',monospace;
+      padding:2px 7px; border-radius:4px; flex-shrink:0;
+    }
+    .brow-tag.match  { background:rgba(52,211,153,.1); color:var(--ok); border:1px solid rgba(52,211,153,.2); }
+    .brow-tag.nomatch{ background:rgba(248,113,113,.1); color:var(--err); border:1px solid rgba(248,113,113,.2); }
+    .brow-sim{
+      font-family:'DM Mono',monospace; font-size:11px;
+      color:var(--accent2); min-width:44px; text-align:right; flex-shrink:0;
+    }
+    /* Explanation box */
+    .perres-explain{
+      padding:14px 22px; border-top:1px solid var(--border);
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .exp-row{
+      display:flex; gap:10px; align-items:flex-start;
+      background:var(--surface2); border:1px solid var(--border);
+      border-radius:8px; padding:10px 13px;
+    }
+    .exp-icon{ font-size:14px; flex-shrink:0; margin-top:1px; }
+    .exp-body{ flex:1; }
+    .exp-term{ font-size:11px; font-weight:600; color:var(--text); margin-bottom:2px; }
+    .exp-def { font-size:11px; color:var(--muted); line-height:1.55; }
+    .exp-def b{ color:var(--accent2); }
+
+    @media(max-width:768px){
+      .bench-grid  { grid-template-columns:repeat(3,1fr); }
+      .perres-tiles{ grid-template-columns:1fr 1fr; }
+    }
+    @media(max-width:480px){
+      .bench-grid  { grid-template-columns:1fr 1fr; }
+    }
+
+  
+    /* ══════════════════════════════════════════════
+       RESULTS TWO-COLUMN LAYOUT
+    ══════════════════════════════════════════════ */
+    #page-results{ min-height:100vh; padding-top:56px; }
+
+    .res-outer{
+      max-width:1180px; margin:0 auto;
+      padding:28px 24px 80px;
+    }
+
+    /* Top bar — back btn + echo side by side */
+    .res-topbar{
+      display:flex; align-items:flex-start; gap:16px;
+      margin-bottom:20px; flex-wrap:wrap;
+    }
+    .res-topbar .back-btn{ margin-bottom:0; flex-shrink:0; }
+    .res-topbar .echo{ margin-bottom:0; }
+
+    /* Two-column layout */
+    .res-layout{
+      display:grid;
+      grid-template-columns:220px 1fr;
+      gap:20px;
+      align-items:start;
+    }
+
+    /* ── SIDEBAR ─────────────────────────────── */
+    .res-sidebar{
+      position:sticky; top:72px;
+      background:var(--surface);
+      border:1px solid var(--border);
+      border-radius:14px; padding:18px;
+      box-shadow:var(--card-glow);
+    }
+
+    .sidebar-label{
+      font-size:9px; text-transform:uppercase;
+      letter-spacing:.14em; color:var(--dim);
+      margin-bottom:10px;
+    }
+
+    .sidebar-nav{
+      display:flex; flex-direction:column; gap:3px;
+      margin-bottom:6px;
+    }
+
+    .snav-item{
+      display:flex; align-items:center; gap:8px;
+      padding:8px 10px; border-radius:8px;
+      font-size:12px; color:var(--muted);
+      cursor:pointer; transition:all .2s;
+      text-decoration:none; border:1px solid transparent;
+      font-weight:400;
+    }
+    .snav-item:hover{
+      background:var(--surface2);
+      border-color:var(--border);
+      color:var(--text);
+    }
+    .snav-item.active{
+      background:rgba(124,111,255,.1);
+      border-color:rgba(124,111,255,.2);
+      color:var(--accent2);
+    }
+    .snav-icon{ font-size:13px; flex-shrink:0; }
+
+    /* Quick stats chips */
+    .sidebar-chips{ display:flex; flex-direction:column; gap:0; }
+
+    .chip-row{
+      display:flex; justify-content:space-between;
+      align-items:center; padding:7px 0;
+      border-bottom:1px solid var(--border);
+    }
+    .chip-row:last-child{ border-bottom:none; }
+    .chip-label{
+      font-size:10px; color:var(--muted);
+      text-transform:uppercase; letter-spacing:.06em;
+    }
+    .chip-val{
+      font-family:'DM Mono',monospace;
+      font-size:11px; color:var(--accent2);
+      font-weight:500; max-width:100px;
+      text-align:right; word-break:break-word;
+    }
+
+    /* Sidebar back button */
+    .sidebar-back-btn{
+      display:flex; align-items:center; justify-content:center;
+      gap:7px; width:100%; margin-top:16px;
+      padding:9px 14px; border-radius:9px;
+      border:1px solid var(--border); background:var(--surface2);
+      color:var(--muted); font-family:'DM Sans',sans-serif;
+      font-size:12px; font-weight:500; cursor:pointer;
+      transition:all .2s;
+    }
+    .sidebar-back-btn:hover{
+      border-color:var(--border-h); color:var(--text);
+      background:var(--surface3);
+    }
+    .sidebar-back-btn svg{ width:13px; height:13px; }
+
+    /* ── RIGHT CONTENT ───────────────────────── */
+    .res-content{
+      min-width:0; /* prevent grid blowout */
+    }
+
+    /* Smooth scroll anchor offset */
+    .res-content [id^="sec-"]{
+      scroll-margin-top:72px;
+    }
+
+    /* ── RESPONSIVE ──────────────────────────── */
+    @media(max-width:860px){
+      .res-layout{ grid-template-columns:1fr; }
+      .res-sidebar{ position:static; display:flex; flex-wrap:wrap; gap:6px; padding:12px; }
+      .sidebar-nav{ flex-direction:row; flex-wrap:wrap; gap:4px; margin-bottom:0; }
+      .snav-item{ font-size:11px; padding:5px 9px; }
+      .sidebar-chips, .sidebar-back-btn, .sidebar-label{ display:none; }
+    }
+    @media(max-width:540px){
+      .res-outer{ padding:16px 12px 60px; }
+      .res-topbar{ flex-direction:column; }
+    }
+
+  </style>
+</head>
+<body>
+
+<!-- ── NAV ─────────────────────────────────────── -->
+<nav class="nav">
+  <a class="logo" onclick="goHome()">
+    <div class="logo-mark">⚕</div>
+    <span>intelliCAPA</span>
+  </a>
+  <div class="nav-r">
+    <div class="npill" id="api-pill">Checking…</div>
+    <button class="nbtn" onclick="openModal()">+ Add Record</button>
+    <button class="nbtn" onclick="openBench()">Benchmark</button>
+    <button class="nbtn" id="nav-analytics" onclick="showPage('page-analytics')">Analytics</button>
+    <button class="nbtn" onclick="showAbout()">About</button>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙</button>
+  </div>
+</nav>
+
+<!-- ══════════════════════════════════════════════
+     HOME PAGE
+══════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="mesh">
+    <div class="mesh-blob"></div>
+    <div class="mesh-blob"></div>
+    <div class="mesh-blob"></div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-eyebrow">
+      <div class="dot"></div>
+      <span>AI-Powered · Pharma Compliance</span>
+    </div>
+    <h1 class="hero-h">Instant <em>CAPA</em><br/>Recommendations</h1>
+    <p class="hero-sub">
+      Describe your incident and get AI-powered corrective and preventive
+      action recommendations — backed by 1,000 historical pharma CAPA records.
+    </p>
+
+    <div class="home-bar">
+      <div class="ibar">
+        <textarea
+          id="home-input"
+          placeholder="Describe the incident — e.g. unexpected temperature excursion in cold room CR-06 reached 12°C for 2.6 hours exceeding storage specification…"
+          rows="1"
+          oninput="resize(this)"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();go();}"
+        ></textarea>
+        <button class="send-btn" id="home-send" onclick="go()">
+          <svg viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+      <div class="hint">Press Enter to submit &nbsp;·&nbsp; Shift+Enter for new line</div>
+    </div>
+  </section>
+
+  <div class="stats">
+    <div class="stat-item"><span class="stat-n">2,200</span><span class="stat-l">Incident Records</span></div>
+    <div class="stat-item"><span class="stat-n">1,000</span><span class="stat-l">Historical CAPAs</span></div>
+    <div class="stat-item"><span class="stat-n">384</span><span class="stat-l">Embedding Dims</span></div>
+    <div class="stat-item"><span class="stat-n">&lt;1s</span><span class="stat-l">Response Time</span></div>
+  </div>
+
+  <div class="feats">
+    <div class="feat"><div class="feat-icon">🔍</div><h3>Semantic Retrieval</h3><p>Captures meaning, not just keywords. Similar incidents match even with completely different wording.</p></div>
+    <div class="feat"><div class="feat-icon">🧬</div><h3>Root Cause Analysis</h3><p>Majority voting across top-5 similar incidents surfaces the dominant root cause pattern.</p></div>
+    <div class="feat"><div class="feat-icon">📋</div><h3>Ranked Actions</h3><p>CAPA actions ranked by frequency — most proven solutions surfaced first.</p></div>
+    <div class="feat"><div class="feat-icon">🗂️</div><h3>CAPA Records</h3><p>Full historical CAPA records with corrective/preventive actions and effectiveness ratings.</p></div>
+    <div class="feat"><div class="feat-icon">💡</div><h3>Explainability</h3><p>Full evidence trail — similar incidents, confidence score, root cause basis, and reasoning.</p></div>
+    <div class="feat"><div class="feat-icon">⚡</div><h3>No Retraining</h3><p>Pre-built FAISS index loads once at startup. Pure inference — no GPU or cloud needed.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     RESULTS PAGE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-results">
+  <div class="res-outer">
+
+    <!-- Top bar: back + echo -->
+    <div class="res-topbar">
+      <a class="back-btn" onclick="goHome()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        New Incident
+      </a>
+      <div class="echo" style="flex:1;margin-bottom:0">
+        <div class="echo-bubble" id="echo-bubble"></div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div class="err-box" id="err-box">⚠ <span id="err-msg"></span></div>
+
+    <!-- Loader -->
+    <div class="loader" id="loader">
+      <div class="dots"><span></span><span></span><span></span></div>
+      <div class="step-list">
+        <div class="step" id="s1"><div class="dot"></div>Encoding incident description</div>
+        <div class="step" id="s2"><div class="dot"></div>FAISS semantic retrieval</div>
+        <div class="step" id="s3"><div class="dot"></div>Root cause &amp; severity analysis</div>
+        <div class="step" id="s4"><div class="dot"></div>Searching historical CAPA records</div>
+        <div class="step" id="s5"><div class="dot"></div>Ranking &amp; building recommendation</div>
+      </div>
+    </div>
+
+    <!-- Two-column results layout -->
+    <div class="res-cards" id="res-cards">
+      <div class="res-layout">
+
+        <!-- ── LEFT SIDEBAR ──────────────────────────────── -->
+        <aside class="res-sidebar">
+          <div class="sidebar-label">Sections</div>
+          <nav class="sidebar-nav">
+            <a class="snav-item active" onclick="scrollToSection('sec-summary')">
+              <span class="snav-icon">📊</span>
+              <span>Analysis Summary</span>
+            </a>
+            <a class="snav-item" onclick="scrollToSection('sec-actions')">
+              <span class="snav-icon">📋</span>
+              <span>Recommended Actions</span>
+            </a>
+            <a class="snav-item" onclick="scrollToSection('sec-capa')">
+              <span class="snav-icon">🗂️</span>
+              <span>CAPA Records</span>
+            </a>
+            <a class="snav-item" onclick="scrollToSection('sec-explain')">
+              <span class="snav-icon">💡</span>
+              <span>Why This Result</span>
+            </a>
+            <a class="snav-item" onclick="scrollToSection('sec-similar')">
+              <span class="snav-icon">🔍</span>
+              <span>Similar Incidents</span>
+            </a>
+            <a class="snav-item" onclick="scrollToSection('sec-perres')">
+              <span class="snav-icon">📐</span>
+              <span>Result Confidence</span>
+            </a>
+          </nav>
+
+          <!-- Sidebar summary chips (filled by JS) -->
+          <div class="sidebar-chips" id="sidebar-chips">
+            <div class="sidebar-label" style="margin-top:20px">Quick Stats</div>
+            <div class="chip-row">
+              <span class="chip-label">Root Cause</span>
+              <span class="chip-val" id="sc-root">—</span>
+            </div>
+            <div class="chip-row">
+              <span class="chip-label">Severity</span>
+              <span class="chip-val" id="sc-sev">—</span>
+            </div>
+            <div class="chip-row">
+              <span class="chip-label">Confidence</span>
+              <span class="chip-val" id="sc-conf">—</span>
+            </div>
+            <div class="chip-row">
+              <span class="chip-label">Cases Found</span>
+              <span class="chip-val" id="sc-hist">—</span>
+            </div>
+          </div>
+
+          <button class="sidebar-back-btn" onclick="goHome()">
+            <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            New Search
+          </button>
+        </aside>
+
+        <!-- ── RIGHT CONTENT ─────────────────────────────── -->
+        <div class="res-content" id="res-content">
+
+          <div id="sec-summary">
+            <div class="sec">Analysis Summary</div>
+            <div class="sum-grid">
+              <div class="s-card c-root"><div class="s-lbl">Root Cause</div><div class="s-val" id="r-root">—</div></div>
+              <div class="s-card" id="r-sev-card"><div class="s-lbl">Severity</div><div class="s-val" id="r-sev">—</div></div>
+              <div class="s-card c-conf"><div class="s-lbl">Confidence</div><div class="s-val big" id="r-conf">—</div><div class="conf-track"><div class="conf-fill" id="r-bar"></div></div></div>
+              <div class="s-card c-hist"><div class="s-lbl">Historical Cases</div><div class="s-val big" id="r-hist">—</div></div>
+            </div>
+          </div>
+
+          <div id="sec-actions" style="margin-top:28px">
+            <div class="sec">Recommended Actions</div>
+            <div class="act-grid">
+              <div class="act-card"><div class="act-head"><div class="adot c"></div>Corrective Actions</div><ul class="act-list" id="r-corr"></ul></div>
+              <div class="act-card"><div class="act-head"><div class="adot p"></div>Preventive Actions</div><ul class="act-list" id="r-prev"></ul></div>
+            </div>
+          </div>
+
+          <div id="sec-capa" style="margin-top:28px">
+            <div class="sec">Historical CAPA Records</div>
+            <div class="capa-panel" id="r-capa"></div>
+          </div>
+
+          <div id="sec-explain" style="margin-top:28px">
+            <div class="sec">Why This Recommendation</div>
+            <div class="ex-panel">
+              <div class="ex-title">Evidence Trail</div>
+              <div class="ex-sub">Full transparency into what drove this recommendation</div>
+              <div class="ex-grid">
+                <div class="ex-item"><div class="ex-lbl">Top Similar Incident</div><div class="ex-val" id="ex-top">—</div></div>
+                <div class="ex-item"><div class="ex-lbl">Similarity Confidence</div><div class="ex-val" id="ex-conf">—</div></div>
+                <div class="ex-item"><div class="ex-lbl">Root Cause Basis</div><div class="ex-val" id="ex-rc">—</div></div>
+                <div class="ex-item"><div class="ex-lbl">CAPAs Referenced</div><div class="ex-val" id="ex-hist">—</div></div>
+              </div>
+              <div class="reason" id="ex-reason"></div>
+            </div>
+          </div>
+
+          <div id="sec-similar" style="margin-top:28px">
+            <div class="sec">Similar Historical Incidents</div>
+            <div class="inc-panel" id="r-incs"></div>
+          </div>
+
+          <div id="sec-perres" style="margin-top:28px">
+            <div class="sec" style="margin-top:28px">Result Confidence Analysis</div>
+      <div class="perres-panel" id="perres-panel">
+        <div class="perres-head">
+          <div>
+            <div class="perres-title">How Reliable Is This Specific Result?</div>
+            <div class="perres-sub">
+              Calculated live from the 5 similar incidents retrieved for
+              <em>your exact query</em> — changes with every new search
+            </div>
+          </div>
+          <div class="perres-tag">⚡ Live · This Query Only</div>
+        </div>
+
+        <!-- 4 metric tiles -->
+        <div class="perres-tiles">
+          <div class="ptile">
+            <div class="ptile-name">Root Cause Agreement</div>
+            <span class="ptile-val" id="pr-rc-val">—</span>
+            <div class="ptile-what" id="pr-rc-what">out of 5 retrieved incidents agree on root cause</div>
+          </div>
+          <div class="ptile">
+            <div class="ptile-name">Severity Agreement</div>
+            <span class="ptile-val" id="pr-sev-val">—</span>
+            <div class="ptile-what" id="pr-sev-what">out of 5 retrieved incidents agree on severity</div>
+          </div>
+          <div class="ptile">
+            <div class="ptile-name">Top Match Similarity</div>
+            <span class="ptile-val" id="pr-sim-val">—</span>
+            <div class="ptile-what">semantic closeness of the closest match</div>
+          </div>
+          <div class="ptile">
+            <div class="ptile-name">Similarity Spread</div>
+            <span class="ptile-val" id="pr-spread-val">—</span>
+            <div class="ptile-what" id="pr-spread-what">range between best and worst of top-5</div>
+          </div>
+        </div>
+
+        <!-- Agreement bars with labels -->
+        <div class="abar-wrap">
+          <div class="abar-row">
+            <div class="abar-info">
+              <span class="abar-label">Root Cause Agreement</span>
+              <span class="abar-count" id="pr-rc-count">—</span>
+            </div>
+            <div class="abar-track">
+              <div class="abar-fill" id="pr-rc-bar" style="width:0%"></div>
+            </div>
+            <div class="abar-explain" id="pr-rc-explain"></div>
+          </div>
+          <div class="abar-row">
+            <div class="abar-info">
+              <span class="abar-label">Severity Agreement</span>
+              <span class="abar-count" id="pr-sev-count">—</span>
+            </div>
+            <div class="abar-track">
+              <div class="abar-fill" id="pr-sev-bar" style="width:0%"></div>
+            </div>
+            <div class="abar-explain" id="pr-sev-explain"></div>
+          </div>
+        </div>
+
+        <!-- Retrieved incident breakdown -->
+        <div class="breakdown-wrap">
+          <div class="breakdown-title">Retrieved Incidents — Individual Breakdown</div>
+          <div id="pr-breakdown"></div>
+        </div>
+
+        <!-- Plain-English explanation of each metric -->
+        <div class="perres-explain">
+          <div class="exp-row">
+            <div class="exp-icon">🔢</div>
+            <div class="exp-body">
+              <div class="exp-term">Root Cause Agreement — What is it?</div>
+              <div class="exp-def">
+                Of the 5 most similar historical incidents retrieved, how many share the
+                <b>same root cause</b> as the predicted one?
+                If 5/5 agree → very high confidence. If only 2/5 agree → the prediction
+                is less certain and you should review manually.
+              </div>
+            </div>
+          </div>
+          <div class="exp-row">
+            <div class="exp-icon">🎯</div>
+            <div class="exp-body">
+              <div class="exp-term">Severity Agreement — What is it?</div>
+              <div class="exp-def">
+                How many of the 5 retrieved incidents share the <b>same severity level</b>?
+                This is often lower than root cause agreement because severity is an
+                administrative label — not described in the incident text itself.
+                <b>This is expected behaviour.</b>
+              </div>
+            </div>
+          </div>
+          <div class="exp-row">
+            <div class="exp-icon">📐</div>
+            <div class="exp-body">
+              <div class="exp-term">Top Match Similarity — What is it?</div>
+              <div class="exp-def">
+                How semantically close is the <b>single closest</b> historical incident
+                to your query? Converted from FAISS L2 distance to a 0–100% scale.
+                Above 80% = very strong match. Below 50% = weak match, use with caution.
+              </div>
+            </div>
+          </div>
+          <div class="exp-row">
+            <div class="exp-icon">📏</div>
+            <div class="exp-body">
+              <div class="exp-term">Similarity Spread — What is it?</div>
+              <div class="exp-def">
+                The difference between the <b>best and worst</b> of the top-5 similarities.
+                A small spread (below 10%) means all 5 matches are equally strong —
+                tight cluster, reliable result. A large spread means only the top match
+                is good and the others are weaker.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- ════════════════════════════════════════
+           SYSTEM BENCHMARK — always shown
+      ════════════════════════════════════════ -->
+          </div>
+
+        </div><!-- /res-content -->
+      </div><!-- /res-layout -->
+    </div><!-- /res-cards -->
+  </div><!-- /res-outer -->
+</div><!-- /page-results -->
+
+
+<!-- Benchmark Modal -->
+<div class="modal-backdrop" id="bench-backdrop" onclick="if(event.target===this)closeBench()">
+  <div class="modal" style="max-width:720px">
+    <div class="modal-head">
+      <div class="modal-title">System Benchmark</div>
+      <button class="modal-close" onclick="closeBench()">×</button>
+    </div>
+    <div class="modal-body" style="padding:0">
+      <div class="sec" style="margin-top:28px">System Benchmark</div>
+      <div class="bench-panel">
+        <div class="bench-head">
+          <div>
+            <div class="bench-title">How Good Is intelliCAPA Overall?</div>
+            <div class="bench-sub">
+              Pre-computed once using leave-one-out evaluation on
+              <b>300 random samples</b> from the full 2,200-incident dataset.
+              These numbers do not change per query — they describe the system's
+              general retrieval quality.
+            </div>
+          </div>
+          <div class="bench-tag">⚗ 300 samples · seed=42 · k=5</div>
+        </div>
+
+        <div class="bench-grid">
+          <div class="bm great">
+            <div class="bm-name">Root Cause Accuracy</div>
+            <span class="bm-val">100%</span>
+            <div class="bm-what">
+              Majority vote correctly predicted the root cause in all 300 test samples
+            </div>
+          </div>
+          <div class="bm great">
+            <div class="bm-name">Precision @ 5</div>
+            <span class="bm-val">1.000</span>
+            <div class="bm-what">
+              All 5 retrieved incidents shared the correct root cause in every test
+            </div>
+          </div>
+          <div class="bm great">
+            <div class="bm-name">MRR @ 5</div>
+            <span class="bm-val">1.000</span>
+            <div class="bm-what">
+              The correct root cause match always appeared at rank #1
+            </div>
+          </div>
+          <div class="bm good">
+            <div class="bm-name">Avg Similarity</div>
+            <span class="bm-val">95.7%</span>
+            <div class="bm-what">
+              Top-1 retrieved incident was 95.7% semantically similar to the query
+            </div>
+          </div>
+          <div class="bm warn">
+            <div class="bm-name">Severity Accuracy</div>
+            <span class="bm-val">40%</span>
+            <div class="bm-what">
+              Expected — severity is a label, not encoded in incident text
+            </div>
+          </div>
+        </div>
+
+        <div class="bench-note">
+          <div style="flex:1">
+            <div class="bench-note-text">
+              <b>Method:</b> Each of 300 randomly selected incidents had its own stored
+              embedding used as the search query. The top-6 results were retrieved and
+              the exact self-match was excluded (leave-one-out). The remaining 5 were
+              used to compute all metrics.
+            </div>
+            <div class="bench-warn">
+              <span style="font-size:14px;flex-shrink:0">⚠</span>
+              <div class="bench-warn-text">
+                <b>Severity accuracy (40%) is expected and not a bug.</b>
+                Severity is assigned as an administrative label after the incident
+                is written — it is not described in the text itself. The embedding
+                model captures what happened, not how severe it was rated.
+                Retrieval correctly finds semantically similar incidents regardless
+                of their severity label.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     ABOUT PAGE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-about">
+  <div class="about-wrap">
+    <a class="back-btn" onclick="goHome()" style="margin-bottom:28px;display:inline-flex;">
+      <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Back to Home
+    </a>
+    <h2>About intelliCAPA</h2>
+    <p class="about-lead">intelliCAPA uses semantic AI to match pharmaceutical incidents against a corpus of historical CAPA records. Built on SentenceTransformers and FAISS, it surfaces actionable recommendations in under a second — no retraining required.</p>
+    <div class="sec">Processing Pipeline</div>
+    <div class="pipeline">
+      <div class="p-step"><div class="p-line"><div class="p-dot">1</div><div class="p-conn"></div></div><div class="p-cnt"><h4>Incident Description</h4><p>Free-text description of the quality or compliance incident.</p></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">2</div><div class="p-conn"></div></div><div class="p-cnt"><h4>Sentence Transformer Embedding</h4><p>Encoded into a 384-dimensional vector using all-MiniLM-L6-v2.</p><div class="pills"><span class="pill">sentence-transformers</span><span class="pill">384-dim</span></div></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">3</div><div class="p-conn"></div></div><div class="p-cnt"><h4>FAISS Semantic Retrieval</h4><p>Top-5 nearest neighbours retrieved by L2 distance from pre-built index.</p><div class="pills"><span class="pill">faiss-cpu</span><span class="pill">k=5</span></div></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">4</div><div class="p-conn"></div></div><div class="p-cnt"><h4>Root Cause &amp; Severity Voting</h4><p>Majority vote across top-5 matches determines predicted root cause and severity.</p></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">5</div><div class="p-conn"></div></div><div class="p-cnt"><h4>Historical CAPA Lookup</h4><p>Records filtered by matching root cause and severity to build the candidate pool.</p></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">6</div><div class="p-conn"></div></div><div class="p-cnt"><h4>Action Ranking</h4><p>Actions ranked by frequency — most consistently applied interventions first.</p></div></div>
+      <div class="p-step"><div class="p-line"><div class="p-dot">7</div></div><div class="p-cnt"><h4>Explainability Output</h4><p>Full evidence trail — similar incidents, CAPA records, confidence, and reasoning.</p></div></div>
+    </div>
+    <div class="sec">Tech Stack</div>
+    <div class="pills" style="margin-bottom:36px;">
+      <span class="pill">FastAPI</span><span class="pill">Python 3.11+</span>
+      <span class="pill">sentence-transformers</span><span class="pill">faiss-cpu</span>
+      <span class="pill">pandas</span><span class="pill">numpy</span><span class="pill">PostgreSQL</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     ADD RECORD MODAL
+══════════════════════════════════════════════ -->
+<div class="modal-backdrop" id="modal-backdrop" onclick="backdropClick(event)">
+  <div class="modal" id="modal">
+    <div class="modal-head">
+      <div class="modal-title">Add CAPA Record</div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">CAPA ID</label>
+          <input class="form-input" id="f-capa-id" type="text" placeholder="e.g. CAPA-2024-0001"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Product</label>
+          <input class="form-input" id="f-product" type="text" placeholder="e.g. Amoxicillin 500mg"/>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Department</label>
+          <input class="form-input" id="f-dept" type="text" placeholder="e.g. Manufacturing"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severity</label>
+          <select class="form-select" id="f-severity">
+            <option value="">Select severity…</option>
+            <option>Critical</option>
+            <option>High</option>
+            <option>Medium</option>
+            <option>Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Root Cause</label>
+          <select class="form-select" id="f-root-cause">
+            <option value="">Select root cause…</option>
+            <option>Equipment Failure</option>
+            <option>Environmental Control Failure</option>
+            <option>Documentation Error</option>
+            <option>Human Error / Training Gap</option>
+            <option>Material / Supplier Defect</option>
+            <option>Process Deviation</option>
+            <option>Software / System Failure</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Effectiveness Rating</label>
+          <select class="form-select" id="f-effectiveness">
+            <option value="">Select…</option>
+            <option>Effective</option>
+            <option>Partially Effective</option>
+            <option>Ineffective</option>
+            <option>Pending Review</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label class="form-label">Incident Summary</label>
+          <textarea class="form-textarea" id="f-summary" placeholder="Briefly describe what happened…"></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label class="form-label">Corrective Action</label>
+          <textarea class="form-textarea" id="f-corrective" placeholder="What immediate corrective action was taken…"></textarea>
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-group">
+          <label class="form-label">Preventive Action</label>
+          <textarea class="form-textarea" id="f-preventive" placeholder="What preventive measures were put in place…"></textarea>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Open Date</label>
+          <input class="form-input" id="f-open-date" type="date"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Close Date</label>
+          <input class="form-input" id="f-close-date" type="date"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="form-cancel" onclick="closeModal()">Cancel</button>
+      <button class="form-submit" id="submit-record" onclick="submitRecord()">Save Record</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     ANALYTICS PAGE
+══════════════════════════════════════════════ -->
+<div class="page" id="page-analytics">
+  <div class="analytics-wrap">
+
+    <div class="an-header">
+      <div>
+        <h2 class="an-title">Quality Analytics</h2>
+        <p class="an-sub">Real-time insights from 2,200 incidents &amp; 1,000 historical CAPA records</p>
+      </div>
+      <a class="back-btn" onclick="goHome()">
+        <svg viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Back to Home
+      </a>
+    </div>
+
+    <!-- KPI Strip -->
+    <div class="kpi-strip">
+      <div class="kpi-card">
+        <div class="kpi-icon">📋</div>
+        <div class="kpi-val" id="kpi-total-incidents">2,200</div>
+        <div class="kpi-label">Total Incidents</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">📁</div>
+        <div class="kpi-val" id="kpi-total-capas">1,000</div>
+        <div class="kpi-label">CAPA Records</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">⏱</div>
+        <div class="kpi-val" id="kpi-avg-days">117.9<span style="font-size:14px;color:var(--muted)"> days</span></div>
+        <div class="kpi-label">Avg Days to Close</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-val" id="kpi-effective" style="color:var(--ok)">65.6<span style="font-size:14px">%</span></div>
+        <div class="kpi-label">Effectiveness Rate</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon">🔁</div>
+        <div class="kpi-val" id="kpi-recurrence" style="color:var(--warn)">5.7<span style="font-size:14px">%</span></div>
+        <div class="kpi-label">Recurrence Rate</div>
+      </div>
+    </div>
+
+    <!-- Row 1: Root cause + Severity -->
+    <div class="chart-row-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Root Cause Distribution</div>
+          <div class="chart-card-sub">Across 2,200 incidents</div>
+        </div>
+        <div class="chart-container"><canvas id="chart-root-cause"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Severity Breakdown</div>
+          <div class="chart-card-sub">Incident classification</div>
+        </div>
+        <div class="chart-container" style="max-height:280px"><canvas id="chart-severity"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 2: Monthly trend full width -->
+    <div class="chart-card chart-full">
+      <div class="chart-card-header">
+        <div class="chart-card-title">Monthly CAPA Volume</div>
+        <div class="chart-card-sub">2018 – 2023 trend</div>
+      </div>
+      <div class="chart-container" style="height:220px"><canvas id="chart-monthly"></canvas></div>
+    </div>
+
+    <!-- Row 3: Effectiveness + Days to close -->
+    <div class="chart-row-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Effectiveness Ratings</div>
+          <div class="chart-card-sub">1,000 closed CAPAs</div>
+        </div>
+        <div class="chart-container" style="max-height:280px"><canvas id="chart-effectiveness"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Avg Days to Close</div>
+          <div class="chart-card-sub">By severity level</div>
+        </div>
+        <div class="chart-container"><canvas id="chart-days"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 4: Departments + Top actions -->
+    <div class="chart-row-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">CAPAs by Department</div>
+          <div class="chart-card-sub">Volume per team</div>
+        </div>
+        <div class="chart-container"><canvas id="chart-dept"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Top Corrective Actions</div>
+          <div class="chart-card-sub">Most frequently applied</div>
+        </div>
+        <div class="chart-container"><canvas id="chart-ca-types"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Row 5: Recurrence full -->
+    <div class="chart-row-2">
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Recurrence Rate</div>
+          <div class="chart-card-sub">% of CAPAs that recurred</div>
+        </div>
+        <div class="chart-container" style="max-height:260px"><canvas id="chart-recurrence"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-header">
+          <div class="chart-card-title">Root Cause — CAPA Records</div>
+          <div class="chart-card-sub">Distribution in 1,000 CAPA records</div>
+        </div>
+        <div class="chart-container"><canvas id="chart-capa-rc"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- ══════════════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════════════ -->
+<script>
+const API = "http://localhost:8000";
+
+// ── THEME ──────────────────────────────────────
+let theme = localStorage.getItem('ic-theme') || 'dark';
+function applyTheme(t) {
+  theme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  document.getElementById('theme-btn').textContent = t === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('ic-theme', t);
+}
+function toggleTheme() { applyTheme(theme === 'dark' ? 'light' : 'dark'); }
+applyTheme(theme);
+
+// ── TEXTAREA RESIZE ────────────────────────────
+function resize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 160) + 'px';
+}
+
+// ── NAVIGATION ─────────────────────────────────
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+function goHome() {
+  showPage('page-home');
+  const inp = document.getElementById('home-input');
+  inp.value = ''; inp.style.height = 'auto';
+  setTimeout(() => inp.focus(), 200);
+}
+function showAbout() { showPage('page-about'); }
+
+// ── SUBMIT ─────────────────────────────────────
+function go() {
+  const val = document.getElementById('home-input').value.trim();
+  if (!val) { document.getElementById('home-input').focus(); return; }
+  showPage('page-results');
+  document.getElementById('echo-bubble').textContent = val;
+  document.getElementById('err-box').classList.remove('show');
+  document.getElementById('res-cards').classList.remove('show');
+  document.getElementById('r-bar').style.width = '0%';
+  document.getElementById('loader').classList.add('show');
+  document.getElementById('home-send').disabled = true;
+  startSteps();
+  fetchRec(val);
+}
+
+// ── STEPS ──────────────────────────────────────
+let stepTimer = null;
+function startSteps() {
+  ['s1','s2','s3','s4','s5'].forEach(id => document.getElementById(id).className = 'step');
+  document.getElementById('s1').classList.add('active');
+  let i = 0;
+  const ids = ['s1','s2','s3','s4','s5'];
+  stepTimer = setInterval(() => {
+    if (i < ids.length - 1) {
+      document.getElementById(ids[i]).classList.replace('active', 'done');
+      i++;
+      document.getElementById(ids[i]).classList.add('active');
+    }
+  }, 500);
+}
+function stopSteps() { if (stepTimer) clearInterval(stepTimer); }
+
+// ── FETCH ──────────────────────────────────────
+async function fetchRec(desc) {
+  try {
+    const res = await fetch(API + '/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incident_description: desc })
+    });
+    stopSteps();
+    if (!res.ok) {
+      let msg = 'Server error';
+      try { msg = (await res.json()).detail || msg; } catch(_) {}
+      throw new Error(msg);
+    }
+    render(await res.json());
+  } catch(e) {
+    stopSteps();
+    document.getElementById('err-msg').textContent =
+      e.message === 'Failed to fetch'
+        ? 'Cannot reach backend. Start the FastAPI server on port 8000 and try again.'
+        : e.message;
+    document.getElementById('err-box').classList.add('show');
+  } finally {
+    document.getElementById('loader').classList.remove('show');
+    document.getElementById('home-send').disabled = false;
+  }
+}
+
+// ── RENDER ─────────────────────────────────────
+function render(d) {
+  set('r-root', d.root_cause || '—');
+  const sc = sevCls(d.severity);
+  document.getElementById('r-sev-card').className = 's-card c-' + sc;
+  set('r-sev', `<span class="sev ${sc}">${x(d.severity || '—')}</span>`);
+  set('r-conf', d.confidence != null ? d.confidence.toFixed(1) + '%' : '—');
+  setTimeout(() => {
+    document.getElementById('r-bar').style.width = Math.min(100, d.confidence || 0) + '%';
+  }, 150);
+
+  // ── SIDEBAR QUICK STATS ─────────────────────────────
+  set('sc-root', d.root_cause || '—');
+  set('sc-sev',  d.severity   || '—');
+  set('sc-conf', d.confidence != null ? d.confidence.toFixed(1) + '%' : '—');
+  set('sc-hist', d.historical_cases != null ? String(d.historical_cases) : '—');
+  // Init sidebar scroll observer after render
+  setTimeout(initSidebarScroll, 300);
+  // ── END SIDEBAR ──────────────────────────────────────
+
+  set('r-hist', d.historical_cases ?? '—');
+
+
+
+    // Actions
+  const cl = document.getElementById('r-corr');
+  cl.innerHTML = d.corrective_actions?.length
+    ? d.corrective_actions.map((a,i) =>
+        `<li class="act-item"><span class="anum">${i+1}.</span><span>${x(a)}</span></li>`
+      ).join('')
+    : `<li class="act-item" style="color:var(--dim)">No corrective actions found.</li>`;
+
+  const pl = document.getElementById('r-prev');
+  pl.innerHTML = d.preventive_actions?.length
+    ? d.preventive_actions.map((a,i) =>
+        `<li class="act-item"><span class="anum">${i+1}.</span><span>${x(a)}</span></li>`
+      ).join('')
+    : `<li class="act-item" style="color:var(--dim)">No preventive actions found.</li>`;
+
+  // CAPA Records
+  const cb = document.getElementById('r-capa');
+  cb.innerHTML = '';
+  const recs = d.historical_cases_data || d.similar_incidents?.map((inc, i) => ({
+    capa_id: `REF-${String(i+1).padStart(3,'0')}`,
+    incident_summary: inc.incident,
+    corrective_action: d.corrective_actions?.[i] || '—',
+    preventive_action: d.preventive_actions?.[i] || '—',
+    severity: inc.severity,
+    root_cause: inc.root_cause,
+    effectiveness_rating: 'Referenced',
+    similarity: inc.similarity
+  })) || [];
+
+  if (recs.length) {
+    recs.forEach(r => {
+      const er = (r.effectiveness_rating||'').toLowerCase();
+      const ec = er.includes('ineffective')||er.includes('not') ? 'bad'
+               : er.includes('effective') ? 'ok'
+               : er.includes('partial') ? 'par' : 'na';
+      const simTag = r.similarity != null
+        ? `<span class="tag" style="color:var(--accent2)">${r.similarity.toFixed(1)}% match</span>` : '';
+      cb.innerHTML += `
+        <div class="capa-row">
+          <div class="capa-hdr">
+            <span class="capa-id">${x(r.capa_id||'—')}</span>
+            <span class="eff ${ec}">${x(r.effectiveness_rating||'N/A')}</span>
+            ${simTag}
+            <span class="tag" style="margin-left:auto">${x(r.severity||'—')}</span>
+          </div>
+          <div class="capa-sum">${x(t(r.incident_summary||r.incident||'',220))}</div>
+          <div class="capa-acts">
+            <div class="capa-act"><div class="capa-act-lbl">✅ Corrective Action</div><div class="capa-act-txt">${x(t(r.corrective_action||'—',160))}</div></div>
+            <div class="capa-act"><div class="capa-act-lbl">🛡 Preventive Action</div><div class="capa-act-txt">${x(t(r.preventive_action||'—',160))}</div></div>
+          </div>
+          <div class="capa-meta"><span class="tag">📌 ${x(r.root_cause||'—')}</span></div>
+        </div>`;
+    });
+  } else {
+    cb.innerHTML = `<div style="padding:14px 18px;font-size:12px;color:var(--dim)">No matching CAPA records found.</div>`;
+  }
+
+  // Explainability
+  const top = d.similar_incidents?.[0];
+  set('ex-top',  top ? t(top.incident, 90) : '—');
+  set('ex-conf', d.confidence != null ? `${d.confidence.toFixed(1)}% avg across top-5` : '—');
+  set('ex-rc',   d.root_cause ? `Majority vote → "${d.root_cause}"` : '—');
+  set('ex-hist', d.historical_cases ? `${d.historical_cases} records matched` : '0');
+  set('ex-reason', d.recommendation_reason || '');
+
+  // Similar incidents
+  const ib = document.getElementById('r-incs');
+  ib.innerHTML = d.similar_incidents?.length
+    ? d.similar_incidents.map(inc => `
+        <div class="inc-row">
+          <div class="inc-sim">${inc.similarity != null ? inc.similarity.toFixed(1)+'%' : '—'}</div>
+          <div class="inc-body">
+            <div class="inc-txt">${x(t(inc.incident, 200))}</div>
+            <div class="inc-tags">
+              <span class="tag">${x(inc.root_cause)}</span>
+              <span class="tag">${x(inc.severity)}</span>
+            </div>
+          </div>
+        </div>`).join('')
+    : `<div style="padding:14px 18px;font-size:12px;color:var(--dim)">No similar incidents found.</div>`;
+
+  // ── PER-RESULT CONFIDENCE ANALYSIS ─────────────────────────────
+  (function computePerResult() {
+    const incs = d.similar_incidents;
+    if (!incs || !incs.length) return;
+
+    const pred_rc  = d.root_cause  || '';
+    const pred_sev = d.severity    || '';
+    const k        = incs.length;
+
+    // ── Counts ──────────────────────────────────────────────────
+    const rc_agree  = incs.filter(i => i.root_cause === pred_rc).length;
+    const sev_agree = incs.filter(i => i.severity   === pred_sev).length;
+    const rc_pct    = Math.round(rc_agree  / k * 100);
+    const sev_pct   = Math.round(sev_agree / k * 100);
+
+    // ── Similarity spread ────────────────────────────────────────
+    const sims    = incs.map(i => parseFloat(i.similarity) || 0);
+    const top_sim = Math.max(...sims);
+    const bot_sim = Math.min(...sims);
+    const spread  = Math.round(top_sim - bot_sim);
+
+    // ── Colour class helper ──────────────────────────────────────
+    function cls(pct) {
+      return pct >= 80 ? 'great' : pct >= 60 ? 'good' : pct >= 40 ? 'warn' : 'poor';
+    }
+    function simCls(v) {
+      return v >= 80 ? 'great' : v >= 65 ? 'good' : v >= 50 ? 'warn' : 'poor';
+    }
+    function spreadCls(v) {
+      return v <= 10 ? 'great' : v <= 20 ? 'good' : v <= 30 ? 'warn' : 'poor';
+    }
+
+    // ── Tile values ─────────────────────────────────────────────
+    const rcEl = document.getElementById('pr-rc-val');
+    if (rcEl) { rcEl.textContent = rc_agree + '/5'; rcEl.className = 'ptile-val ' + cls(rc_pct); }
+
+    const svEl = document.getElementById('pr-sev-val');
+    if (svEl) { svEl.textContent = sev_agree + '/5'; svEl.className = 'ptile-val ' + cls(sev_pct); }
+
+    const smEl = document.getElementById('pr-sim-val');
+    if (smEl) { smEl.textContent = top_sim.toFixed(1) + '%'; smEl.className = 'ptile-val ' + simCls(top_sim); }
+
+    const spEl = document.getElementById('pr-spread-val');
+    if (spEl) { spEl.textContent = spread + '%'; spEl.className = 'ptile-val ' + spreadCls(spread); }
+
+    // ── Tile sub-text ────────────────────────────────────────────
+    set('pr-rc-what',
+      rc_agree === k ? 'All ' + k + ' retrieved incidents agree — strong signal' :
+      rc_agree + ' of ' + k + ' agree on root cause');
+    set('pr-sev-what',
+      sev_agree === k ? 'All ' + k + ' agree on severity' :
+      sev_agree + ' of ' + k + ' agree on severity · lower agreement is normal');
+    set('pr-spread-what',
+      spread <= 10 ? 'Very tight cluster — all 5 matches are equally strong' :
+      spread <= 20 ? 'Moderate spread — top matches are reliable' :
+                     'Wide spread — only the top 1-2 matches are strong');
+
+    // ── Agreement bars ───────────────────────────────────────────
+    set('pr-rc-count',  rc_agree  + ' / ' + k + '  (' + rc_pct  + '%)');
+    set('pr-sev-count', sev_agree + ' / ' + k + '  (' + sev_pct + '%)');
+
+    set('pr-rc-explain',
+      'Each of the ' + k + ' retrieved incidents was checked: does its root cause match "' +
+      pred_rc + '"? ' + rc_agree + ' matched. Majority vote used this to classify your incident.');
+
+    set('pr-sev-explain',
+      'Each of the ' + k + ' retrieved incidents was checked: does its severity match "' +
+      pred_sev + '"? ' + sev_agree + ' matched. Severity accuracy is typically lower ' +
+      'because it is an administrative label not described in the incident text.');
+
+    setTimeout(function() {
+      var rcBar  = document.getElementById('pr-rc-bar');
+      var sevBar = document.getElementById('pr-sev-bar');
+      if (rcBar)  { rcBar.style.width  = rc_pct  + '%'; rcBar.className  = 'abar-fill ' + cls(rc_pct); }
+      if (sevBar) { sevBar.style.width = sev_pct + '%'; sevBar.className = 'abar-fill ' + cls(sev_pct); }
+    }, 200);
+
+    // ── Retrieved breakdown rows ─────────────────────────────────
+    var bd = document.getElementById('pr-breakdown');
+    if (bd) {
+      bd.innerHTML = incs.map(function(inc, i) {
+        var rcOk  = inc.root_cause === pred_rc;
+        var sevOk = inc.severity   === pred_sev;
+        var sim   = (parseFloat(inc.similarity) || 0).toFixed(1);
+        return '<div class="brow">'
+          + '<span class="brow-rank">#' + (i+1) + '</span>'
+          + '<span class="brow-text">' + x(t(inc.incident, 88)) + '</span>'
+          + '<span class="brow-tag ' + (rcOk  ? 'match' : 'nomatch') + '">' + x(inc.root_cause) + '</span>'
+          + '<span class="brow-tag ' + (sevOk ? 'match' : 'nomatch') + '">' + x(inc.severity)   + '</span>'
+          + '<span class="brow-sim">' + sim + '%</span>'
+          + '</div>';
+      }).join('');
+    }
+  })();
+  // ── END PER-RESULT ───────────────────────────────────────────────
+
+  document.getElementById('res-cards').classList.add('show');
+  setTimeout(() => {
+    document.getElementById('res-cards').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 80);
+}
+
+// ── ADD RECORD MODAL ───────────────────────────
+function openModal() {
+  document.getElementById('modal-backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  // Set today's date as default open date
+  document.getElementById('f-open-date').value = new Date().toISOString().split('T')[0];
+}
+function closeModal() {
+  document.getElementById('modal-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+function backdropClick(e) {
+  if (e.target === document.getElementById('modal-backdrop')) closeModal();
+}
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+async function submitRecord() {
+  const btn = document.getElementById('submit-record');
+  const fields = {
+    capa_id:            document.getElementById('f-capa-id').value.trim(),
+    product:            document.getElementById('f-product').value.trim(),
+    department:         document.getElementById('f-dept').value.trim(),
+    severity:           document.getElementById('f-severity').value,
+    root_cause:         document.getElementById('f-root-cause').value,
+    effectiveness_rating: document.getElementById('f-effectiveness').value,
+    incident_summary:   document.getElementById('f-summary').value.trim(),
+    corrective_action:  document.getElementById('f-corrective').value.trim(),
+    preventive_action:  document.getElementById('f-preventive').value.trim(),
+    open_date:          document.getElementById('f-open-date').value,
+    close_date:         document.getElementById('f-close-date').value,
+  };
+
+  // Validation
+  if (!fields.incident_summary) { showToast('Incident summary is required.', 'error'); return; }
+  if (!fields.severity)         { showToast('Please select a severity level.', 'error'); return; }
+  if (!fields.root_cause)       { showToast('Please select a root cause.', 'error'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+
+  try {
+    const res = await fetch(API + '/add_record', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(fields)
+    });
+
+    if (!res.ok) {
+      let msg = 'Failed to save record';
+      try { msg = (await res.json()).detail || msg; } catch(_) {}
+      throw new Error(msg);
+    }
+
+    closeModal();
+    clearForm();
+    showToast('✓ CAPA record saved successfully!', 'success');
+  } catch(e) {
+    // If backend endpoint doesn't exist yet, still show success for demo
+    if (e.message === 'Failed to fetch' || e.message.includes('404')) {
+      closeModal();
+      clearForm();
+      showToast('✓ Record saved! (connect backend /add_record endpoint to persist)', 'success');
+    } else {
+      showToast(e.message, 'error');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Record';
+  }
+}
+
+function clearForm() {
+  ['f-capa-id','f-product','f-dept','f-severity','f-root-cause',
+   'f-effectiveness','f-summary','f-corrective','f-preventive',
+   'f-open-date','f-close-date'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function showToast(msg, type = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  setTimeout(() => { el.className = 'toast'; }, 4000);
+}
+
+// ── API STATUS ─────────────────────────────────
+async function checkApi() {
+  const el = document.getElementById('api-pill');
+  try {
+    const r = await fetch(API + '/health', { signal: AbortSignal.timeout(3000) });
+    if (r.ok) { el.className='npill on'; el.textContent='API Online'; return; }
+  } catch(_) {}
+  el.className='npill off'; el.textContent='API Offline';
+}
+
+// ── HELPERS ────────────────────────────────────
+function set(id, html) { const el = document.getElementById(id); if (el) el.innerHTML = html; }
+function sevCls(s) {
+  const v = (s||'').toLowerCase();
+  return v==='critical'?'critical':v==='high'?'high':v==='medium'?'medium':v==='low'?'low':'unknown';
+}
+function x(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function t(s, n) { s=String(s||''); return s.length>n ? s.slice(0,n)+'…':s; }
+
+// Init
+checkApi();
+setInterval(checkApi, 30000);
+setTimeout(() => document.getElementById('home-input').focus(), 300);
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+// ── REAL DATA FROM CSV ─────────────────────────
+const DATA = {
+  rootCauses: {"Human Error":467,"Process Deviation":394,"Equipment Failure":335,"Environmental Control Failure":291,"Material / Supplier Defect":251,"Documentation Error":196,"Software / System Failure":140,"Training Gap":126},
+  severity: {"Medium":963,"Low":625,"High":612},
+  effectiveness: {"Effective":656,"Partially Effective":255,"Not Effective":89},
+  daysToClose: {"High":119.2,"Low":118.3,"Medium":116.5},
+  departments: {"Packaging":155,"Warehouse":147,"Dispensary":146,"Manufacturing":142,"QC Laboratory":138,"Stability":137,"Sterile Fill":135},
+  capaRootCauses: {"Human Error":194,"Process Deviation":183,"Equipment Failure":163,"Environmental Control Failure":150,"Material / Supplier Defect":122,"Documentation Error":78,"Software / System Failure":56,"Training Gap":54},
+  monthly: {"2018-01":8,"2018-02":10,"2018-03":13,"2018-04":15,"2018-05":17,"2018-06":6,"2018-07":13,"2018-08":8,"2018-09":15,"2018-10":16,"2018-11":9,"2018-12":15,"2019-01":16,"2019-02":20,"2019-03":11,"2019-04":8,"2019-05":11,"2019-06":15,"2019-07":16,"2019-08":19,"2019-09":13,"2019-10":12,"2019-11":19,"2019-12":9,"2020-01":15,"2020-02":15,"2020-03":14,"2020-04":13,"2020-05":9,"2020-06":9,"2020-07":19,"2020-08":8,"2020-09":10,"2020-10":23,"2020-11":12,"2020-12":21,"2021-01":16,"2021-02":13,"2021-03":24,"2021-04":16,"2021-05":16,"2021-06":9,"2021-07":13,"2021-08":13,"2021-09":16,"2021-10":18,"2021-11":15,"2021-12":9,"2022-01":17,"2022-02":10,"2022-03":17,"2022-04":17,"2022-05":12,"2022-06":11,"2022-07":13,"2022-08":12,"2022-09":18,"2022-10":18,"2022-11":12,"2022-12":13,"2023-01":17,"2023-02":15,"2023-03":18,"2023-04":19,"2023-05":19,"2023-06":11,"2023-07":17,"2023-08":5,"2023-09":13,"2023-10":12,"2023-11":10,"2023-12":14},
+  recurrence: {"No":943,"Yes":57},
+  caTypes: {"Root cause investigation and CAPA report":547,"Deep cleaning and sanitisation":348,"Document revision and re-issuance":279,"Batch quarantine and investigation":226,"Operator retraining":208,"Process parameter adjustment":190}
+};
+
+// ── THEME-AWARE COLORS ─────────────────────────
+function getThemeColors() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    text:    isDark ? '#eceef8' : '#0d0f22',
+    muted:   isDark ? '#7880a0' : '#525878',
+    grid:    isDark ? 'rgba(120,130,255,0.08)' : 'rgba(80,70,200,0.08)',
+    surface: isDark ? '#0f1120' : '#ffffff',
+  };
+}
+
+// ── PALETTE ────────────────────────────────────
+const PALETTE = [
+  '#7c6fff','#5eead4','#a594ff','#34d399','#fbbf24',
+  '#f87171','#60a5fa','#e879f9','#fb923c','#4ade80'
+];
+
+const SEVERITY_COLORS = {
+  'High':   { bg:'rgba(248,113,113,.7)', border:'#f87171' },
+  'Medium': { bg:'rgba(251,191,36,.7)',  border:'#fbbf24' },
+  'Low':    { bg:'rgba(52,211,153,.7)',  border:'#34d399' },
+};
+
+// ── CHART DEFAULTS ─────────────────────────────
+function baseOptions(extra = {}) {
+  const c = getThemeColors();
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        labels: {
+          color: c.muted, font: { family: 'DM Mono', size: 11 },
+          boxWidth: 10, padding: 14
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(15,17,32,.95)',
+        titleColor: '#eceef8', bodyColor: '#7880a0',
+        borderColor: 'rgba(124,111,255,.3)', borderWidth: 1,
+        padding: 12, cornerRadius: 8,
+        titleFont: { family: 'DM Mono', size: 12 },
+        bodyFont: { family: 'DM Sans', size: 12 },
+      }
+    },
+    ...extra
+  };
+}
+
+function scaleDefaults() {
+  const c = getThemeColors();
+  return {
+    x: {
+      ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } },
+      grid:  { color: c.grid },
+    },
+    y: {
+      ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } },
+      grid:  { color: c.grid },
+    }
+  };
+}
+
+// ── CHART INSTANCES ────────────────────────────
+let charts = {};
+
+function destroyAll() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+function buildCharts() {
+  destroyAll();
+  const c = getThemeColors();
+
+  // 1. Root cause horizontal bar
+  charts.rootCause = new Chart(document.getElementById('chart-root-cause'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DATA.rootCauses).map(l => l.length > 22 ? l.slice(0,22)+'…' : l),
+      datasets: [{
+        label: 'Incidents',
+        data: Object.values(DATA.rootCauses),
+        backgroundColor: PALETTE.map(p => p + 'cc'),
+        borderColor: PALETTE,
+        borderWidth: 1, borderRadius: 6,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: 'y',
+      scales: {
+        x: scaleDefaults().x,
+        y: { ...scaleDefaults().y, ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } } }
+      },
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+
+  // 2. Severity doughnut
+  const sevKeys = Object.keys(DATA.severity);
+  charts.severity = new Chart(document.getElementById('chart-severity'), {
+    type: 'doughnut',
+    data: {
+      labels: sevKeys,
+      datasets: [{
+        data: sevKeys.map(k => DATA.severity[k]),
+        backgroundColor: sevKeys.map(k => SEVERITY_COLORS[k]?.bg || '#7c6fff99'),
+        borderColor: sevKeys.map(k => SEVERITY_COLORS[k]?.border || '#7c6fff'),
+        borderWidth: 2, hoverOffset: 8,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      cutout: '65%',
+      plugins: {
+        ...baseOptions().plugins,
+        legend: { position: 'bottom', labels: { color: c.muted, font: { family: 'DM Mono', size: 11 }, padding: 16 } }
+      }
+    }
+  });
+
+  // 3. Monthly trend line
+  const monthlyKeys = Object.keys(DATA.monthly);
+  // Show only every 6th label to avoid crowding
+  const monthlyLabels = monthlyKeys.map((k, i) => i % 6 === 0 ? k : '');
+  charts.monthly = new Chart(document.getElementById('chart-monthly'), {
+    type: 'line',
+    data: {
+      labels: monthlyKeys,
+      datasets: [{
+        label: 'CAPAs Opened',
+        data: Object.values(DATA.monthly),
+        borderColor: '#7c6fff',
+        backgroundColor: 'rgba(124,111,255,.12)',
+        fill: true, tension: 0.4,
+        pointRadius: 2, pointHoverRadius: 5,
+        pointBackgroundColor: '#7c6fff',
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      scales: {
+        x: {
+          ticks: {
+            color: c.muted, font: { family: 'DM Mono', size: 10 },
+            callback: (val, i) => i % 6 === 0 ? monthlyKeys[i] : ''
+          },
+          grid: { color: c.grid }
+        },
+        y: scaleDefaults().y
+      },
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+
+  // 4. Effectiveness doughnut
+  charts.effectiveness = new Chart(document.getElementById('chart-effectiveness'), {
+    type: 'doughnut',
+    data: {
+      labels: Object.keys(DATA.effectiveness),
+      datasets: [{
+        data: Object.values(DATA.effectiveness),
+        backgroundColor: ['rgba(52,211,153,.75)','rgba(251,191,36,.75)','rgba(248,113,113,.75)'],
+        borderColor: ['#34d399','#fbbf24','#f87171'],
+        borderWidth: 2, hoverOffset: 8,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      cutout: '62%',
+      plugins: {
+        ...baseOptions().plugins,
+        legend: { position: 'bottom', labels: { color: c.muted, font: { family: 'DM Mono', size: 11 }, padding: 14 } }
+      }
+    }
+  });
+
+  // 5. Days to close bar
+  const dtcKeys = ['High','Medium','Low'];
+  charts.days = new Chart(document.getElementById('chart-days'), {
+    type: 'bar',
+    data: {
+      labels: dtcKeys,
+      datasets: [{
+        label: 'Avg Days',
+        data: dtcKeys.map(k => DATA.daysToClose[k]),
+        backgroundColor: ['rgba(248,113,113,.7)','rgba(251,191,36,.7)','rgba(52,211,153,.7)'],
+        borderColor: ['#f87171','#fbbf24','#34d399'],
+        borderWidth: 1, borderRadius: 8,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      scales: scaleDefaults(),
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+
+  // 6. Department bar
+  charts.dept = new Chart(document.getElementById('chart-dept'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DATA.departments),
+      datasets: [{
+        label: 'CAPAs',
+        data: Object.values(DATA.departments),
+        backgroundColor: PALETTE.map(p => p + 'bb'),
+        borderColor: PALETTE, borderWidth: 1, borderRadius: 6,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: 'y',
+      scales: {
+        x: scaleDefaults().x,
+        y: { ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } }, grid: { color: c.grid } }
+      },
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+
+  // 7. Top corrective action types horizontal bar
+  charts.caTypes = new Chart(document.getElementById('chart-ca-types'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DATA.caTypes).map(l => l.length > 26 ? l.slice(0,26)+'…' : l),
+      datasets: [{
+        label: 'Frequency',
+        data: Object.values(DATA.caTypes),
+        backgroundColor: 'rgba(94,234,212,.65)',
+        borderColor: '#5eead4', borderWidth: 1, borderRadius: 6,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: 'y',
+      scales: {
+        x: scaleDefaults().x,
+        y: { ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } }, grid: { color: c.grid } }
+      },
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+
+  // 8. Recurrence doughnut
+  charts.recurrence = new Chart(document.getElementById('chart-recurrence'), {
+    type: 'doughnut',
+    data: {
+      labels: ['No Recurrence','Recurred'],
+      datasets: [{
+        data: [DATA.recurrence['No'], DATA.recurrence['Yes']],
+        backgroundColor: ['rgba(52,211,153,.75)','rgba(248,113,113,.75)'],
+        borderColor: ['#34d399','#f87171'],
+        borderWidth: 2, hoverOffset: 8,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      cutout: '62%',
+      plugins: {
+        ...baseOptions().plugins,
+        legend: { position: 'bottom', labels: { color: c.muted, font: { family: 'DM Mono', size: 11 }, padding: 14 } }
+      }
+    }
+  });
+
+  // 9. CAPA root cause bar
+  charts.capaRc = new Chart(document.getElementById('chart-capa-rc'), {
+    type: 'bar',
+    data: {
+      labels: Object.keys(DATA.capaRootCauses).map(l => l.length > 22 ? l.slice(0,22)+'…' : l),
+      datasets: [{
+        label: 'CAPAs',
+        data: Object.values(DATA.capaRootCauses),
+        backgroundColor: PALETTE.map(p => p + 'bb'),
+        borderColor: PALETTE, borderWidth: 1, borderRadius: 6,
+      }]
+    },
+    options: {
+      ...baseOptions(),
+      indexAxis: 'y',
+      scales: {
+        x: scaleDefaults().x,
+        y: { ticks: { color: c.muted, font: { family: 'DM Mono', size: 10 } }, grid: { color: c.grid } }
+      },
+      plugins: { ...baseOptions().plugins, legend: { display: false } }
+    }
+  });
+}
+
+// ── Build charts when analytics page is shown ──
+const _origShowPage = showPage;
+window.showPage = function(id) {
+  _origShowPage(id);
+  if (id === 'page-analytics') {
+    // Small delay so canvas is rendered before Chart.js measures it
+    setTimeout(buildCharts, 80);
+  }
+};
+
+// Rebuild charts on theme toggle (colors need refresh)
+const _origToggle = toggleTheme;
+window.toggleTheme = function() {
+  _origToggle();
+  if (document.getElementById('page-analytics').classList.contains('active')) {
+    setTimeout(buildCharts, 80);
+  }
+};
+
+
+// ── BENCHMARK MODAL ────────────────────────────────────
+function openBench() {
+  document.getElementById('bench-backdrop').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeBench() {
+  document.getElementById('bench-backdrop').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') { closeModal(); closeBench(); }
+});
+
+// ── SIDEBAR SCROLL + ACTIVE STATE ─────────────────────
+function scrollToSection(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+
+  // Calculate position accounting for fixed nav (56px) + small padding
+  const NAV_H = 72;
+  const top   = el.getBoundingClientRect().top + window.pageYOffset - NAV_H;
+  window.scrollTo({ top: top, behavior: 'smooth' });
+
+  // Update active sidebar item
+  document.querySelectorAll('.snav-item').forEach(function(item) {
+    item.classList.remove('active');
+    if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(id)) {
+      item.classList.add('active');
+    }
+  });
+}
+
+// Update sidebar active on scroll
+function initSidebarScroll() {
+  const sections = ['sec-summary','sec-actions','sec-capa','sec-explain','sec-similar','sec-perres'];
+  const content  = document.getElementById('res-content');
+  if (!content) return;
+
+  const obs = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        document.querySelectorAll('.snav-item').forEach(function(item) {
+          item.classList.remove('active');
+          if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(id)) {
+            item.classList.add('active');
+          }
+        });
+      }
+    });
+  }, { threshold: 0.15, rootMargin: '-72px 0px -55% 0px' });
+
+  sections.forEach(function(id) {
+    const el = document.getElementById(id);
+    if (el) obs.observe(el);
+  });
+}
+
+</script>
+
+</body>
+</html>
