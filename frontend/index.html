@@ -3531,20 +3531,20 @@
             setTimeout(initSidebarScroll, 300);
             // ── END SIDEBAR ──────────────────────────────────────
 
-            set('r-hist', d.historical_cases ? ? '—');
+            set('r-hist', d.historical_cases ?? '—');
 
 
 
             // Actions
             const cl = document.getElementById('r-corr');
-            cl.innerHTML = d.corrective_actions ? .length ?
+            cl.innerHTML = d.corrective_actions ?.length ?
                 d.corrective_actions.map((a, i) =>
                     `<li class="act-item"><span class="anum">${i+1}.</span><span>${x(a)}</span></li>`
                 ).join('') :
                 `<li class="act-item" style="color:var(--dim)">No corrective actions found.</li>`;
 
             const pl = document.getElementById('r-prev');
-            pl.innerHTML = d.preventive_actions ? .length ?
+            pl.innerHTML = d.preventive_actions ?.length ?
                 d.preventive_actions.map((a, i) =>
                     `<li class="act-item"><span class="anum">${i+1}.</span><span>${x(a)}</span></li>`
                 ).join('') :
@@ -3553,11 +3553,11 @@
             // CAPA Records
             const cb = document.getElementById('r-capa');
             cb.innerHTML = '';
-            const recs = d.historical_cases_data || d.similar_incidents ? .map((inc, i) => ({
+            const recs = d.historical_cases_data || d.similar_incidents ?.map((inc, i) => ({
                 capa_id: `REF-${String(i+1).padStart(3,'0')}`,
                 incident_summary: inc.incident,
-                corrective_action: d.corrective_actions ? .[i] || '—',
-                preventive_action: d.preventive_actions ? .[i] || '—',
+                corrective_action: d.corrective_actions ?.[i] || '—',
+                preventive_action: d.preventive_actions ?.[i] || '—',
                 severity: inc.severity,
                 root_cause: inc.root_cause,
                 effectiveness_rating: 'Referenced',
@@ -3593,7 +3593,7 @@
             }
 
             // Explainability
-            const top = d.similar_incidents ? .[0];
+            const top = d.similar_incidents ?.[0];
             set('ex-top', top ? t(top.incident, 90) : '—');
             set('ex-conf', d.confidence != null ? `${d.confidence.toFixed(1)}% avg across top-5` : '—');
             set('ex-rc', d.root_cause ? `Majority vote → "${d.root_cause}"` : '—');
@@ -3602,7 +3602,7 @@
 
             // Similar incidents
             const ib = document.getElementById('r-incs');
-            ib.innerHTML = d.similar_incidents ? .length ?
+            ib.innerHTML = d.similar_incidents ?.length ?
                 d.similar_incidents.map(inc => `
         <div class="inc-row">
           <div class="inc-sim">${inc.similarity != null ? inc.similarity.toFixed(1)+'%' : '—'}</div>
@@ -4186,8 +4186,8 @@
                     labels: sevKeys,
                     datasets: [{
                         data: sevKeys.map(k => DATA.severity[k]),
-                        backgroundColor: sevKeys.map(k => SEVERITY_COLORS[k] ? .bg || '#7c6fff99'),
-                        borderColor: sevKeys.map(k => SEVERITY_COLORS[k] ? .border || '#7c6fff'),
+                        backgroundColor: sevKeys.map(k => SEVERITY_COLORS[k] ?.bg || '#7c6fff99'),
+                        borderColor: sevKeys.map(k => SEVERITY_COLORS[k] ?.border || '#7c6fff'),
                         borderWidth: 2,
                         hoverOffset: 8,
                     }]
