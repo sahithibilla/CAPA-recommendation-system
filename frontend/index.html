@@ -2637,7 +2637,7 @@
         <div class="stats">
             <div class="stat-item"><span class="stat-n">2,200</span><span class="stat-l">Incident Records</span></div>
             <div class="stat-item"><span class="stat-n">1,000</span><span class="stat-l">Historical CAPAs</span></div>
-            <div class="stat-item"><span class="stat-n">384</span><span class="stat-l">Embedding Dims</span></div>
+            <div class="stat-item"><span class="stat-n">384</span><span class="stat-l">Embedding Dimensions</span></div>
             <div class="stat-item"><span class="stat-n">&lt;1s</span><span class="stat-l">Response Time</span></div>
         </div>
 
@@ -2735,10 +2735,7 @@
                                 <span class="snav-icon">💡</span>
                                 <span>Why This Result</span>
                             </a>
-                            <a class="snav-item" onclick="scrollToSection('sec-similar')">
-                                <span class="snav-icon">🔍</span>
-                                <span>Similar Incidents</span>
-                            </a>
+                            
                             <a class="snav-item" onclick="scrollToSection('sec-perres')">
                                 <span class="snav-icon">📐</span>
                                 <span>Result Confidence</span>
@@ -2846,11 +2843,6 @@
                                 </div>
                                 <div class="reason" id="ex-reason"></div>
                             </div>
-                        </div>
-
-                        <div id="sec-similar" style="margin-top:28px">
-                            <div class="sec">Similar Historical Incidents</div>
-                            <div class="inc-panel" id="r-incs"></div>
                         </div>
 
                         <div id="sec-perres" style="margin-top:28px">
@@ -3599,138 +3591,6 @@
             set('ex-rc', d.root_cause ? `Majority vote → "${d.root_cause}"` : '—');
             set('ex-hist', d.historical_cases ? `${d.historical_cases} records matched` : '0');
             set('ex-reason', d.recommendation_reason || '');
-
-            // Similar incidents
-            const ib = document.getElementById('r-incs');
-            ib.innerHTML = d.similar_incidents ?.length ?
-                d.similar_incidents.map(inc => `
-        <div class="inc-row">
-          <div class="inc-sim">${inc.similarity != null ? inc.similarity.toFixed(1)+'%' : '—'}</div>
-          <div class="inc-body">
-            <div class="inc-txt">${x(t(inc.incident, 200))}</div>
-            <div class="inc-tags">
-              <span class="tag">${x(inc.root_cause)}</span>
-              <span class="tag">${x(inc.severity)}</span>
-            </div>
-          </div>
-        </div>`).join('') :
-                `<div style="padding:14px 18px;font-size:12px;color:var(--dim)">No similar incidents found.</div>`;
-
-            // ── PER-RESULT CONFIDENCE ANALYSIS ─────────────────────────────
-            (function computePerResult() {
-                const incs = d.similar_incidents;
-                if (!incs || !incs.length) return;
-
-                const pred_rc = d.root_cause || '';
-                const pred_sev = d.severity || '';
-                const k = incs.length;
-
-                // ── Counts ──────────────────────────────────────────────────
-                const rc_agree = incs.filter(i => i.root_cause === pred_rc).length;
-                const sev_agree = incs.filter(i => i.severity === pred_sev).length;
-                const rc_pct = Math.round(rc_agree / k * 100);
-                const sev_pct = Math.round(sev_agree / k * 100);
-
-                // ── Similarity spread ────────────────────────────────────────
-                const sims = incs.map(i => parseFloat(i.similarity) || 0);
-                const top_sim = Math.max(...sims);
-                const bot_sim = Math.min(...sims);
-                const spread = Math.round(top_sim - bot_sim);
-
-                // ── Colour class helper ──────────────────────────────────────
-                function cls(pct) {
-                    return pct >= 80 ? 'great' : pct >= 60 ? 'good' : pct >= 40 ? 'warn' : 'poor';
-                }
-
-                function simCls(v) {
-                    return v >= 80 ? 'great' : v >= 65 ? 'good' : v >= 50 ? 'warn' : 'poor';
-                }
-
-                function spreadCls(v) {
-                    return v <= 10 ? 'great' : v <= 20 ? 'good' : v <= 30 ? 'warn' : 'poor';
-                }
-
-                // ── Tile values ─────────────────────────────────────────────
-                const rcEl = document.getElementById('pr-rc-val');
-                if (rcEl) {
-                    rcEl.textContent = rc_agree + '/5';
-                    rcEl.className = 'ptile-val ' + cls(rc_pct);
-                }
-
-                const svEl = document.getElementById('pr-sev-val');
-                if (svEl) {
-                    svEl.textContent = sev_agree + '/5';
-                    svEl.className = 'ptile-val ' + cls(sev_pct);
-                }
-
-                const smEl = document.getElementById('pr-sim-val');
-                if (smEl) {
-                    smEl.textContent = top_sim.toFixed(1) + '%';
-                    smEl.className = 'ptile-val ' + simCls(top_sim);
-                }
-
-                const spEl = document.getElementById('pr-spread-val');
-                if (spEl) {
-                    spEl.textContent = spread + '%';
-                    spEl.className = 'ptile-val ' + spreadCls(spread);
-                }
-
-                // ── Tile sub-text ────────────────────────────────────────────
-                set('pr-rc-what',
-                    rc_agree === k ? 'All ' + k + ' retrieved incidents agree — strong signal' :
-                    rc_agree + ' of ' + k + ' agree on root cause');
-                set('pr-sev-what',
-                    sev_agree === k ? 'All ' + k + ' agree on severity' :
-                    sev_agree + ' of ' + k + ' agree on severity · lower agreement is normal');
-                set('pr-spread-what',
-                    spread <= 10 ? 'Very tight cluster — all 5 matches are equally strong' :
-                    spread <= 20 ? 'Moderate spread — top matches are reliable' :
-                    'Wide spread — only the top 1-2 matches are strong');
-
-                // ── Agreement bars ───────────────────────────────────────────
-                set('pr-rc-count', rc_agree + ' / ' + k + '  (' + rc_pct + '%)');
-                set('pr-sev-count', sev_agree + ' / ' + k + '  (' + sev_pct + '%)');
-
-                set('pr-rc-explain',
-                    'Each of the ' + k + ' retrieved incidents was checked: does its root cause match "' +
-                    pred_rc + '"? ' + rc_agree + ' matched. Majority vote used this to classify your incident.');
-
-                set('pr-sev-explain',
-                    'Each of the ' + k + ' retrieved incidents was checked: does its severity match "' +
-                    pred_sev + '"? ' + sev_agree + ' matched. Severity accuracy is typically lower ' +
-                    'because it is an administrative label not described in the incident text.');
-
-                setTimeout(function() {
-                    var rcBar = document.getElementById('pr-rc-bar');
-                    var sevBar = document.getElementById('pr-sev-bar');
-                    if (rcBar) {
-                        rcBar.style.width = rc_pct + '%';
-                        rcBar.className = 'abar-fill ' + cls(rc_pct);
-                    }
-                    if (sevBar) {
-                        sevBar.style.width = sev_pct + '%';
-                        sevBar.className = 'abar-fill ' + cls(sev_pct);
-                    }
-                }, 200);
-
-                // ── Retrieved breakdown rows ─────────────────────────────────
-                var bd = document.getElementById('pr-breakdown');
-                if (bd) {
-                    bd.innerHTML = incs.map(function(inc, i) {
-                        var rcOk = inc.root_cause === pred_rc;
-                        var sevOk = inc.severity === pred_sev;
-                        var sim = (parseFloat(inc.similarity) || 0).toFixed(1);
-                        return '<div class="brow">' +
-                            '<span class="brow-rank">#' + (i + 1) + '</span>' +
-                            '<span class="brow-text">' + x(t(inc.incident, 88)) + '</span>' +
-                            '<span class="brow-tag ' + (rcOk ? 'match' : 'nomatch') + '">' + x(inc.root_cause) + '</span>' +
-                            '<span class="brow-tag ' + (sevOk ? 'match' : 'nomatch') + '">' + x(inc.severity) + '</span>' +
-                            '<span class="brow-sim">' + sim + '%</span>' +
-                            '</div>';
-                    }).join('');
-                }
-            })();
-            // ── END PER-RESULT ───────────────────────────────────────────────
 
             document.getElementById('res-cards').classList.add('show');
             setTimeout(() => {
@@ -4533,7 +4393,7 @@
 
         // Update sidebar active on scroll
         function initSidebarScroll() {
-            const sections = ['sec-summary', 'sec-actions', 'sec-capa', 'sec-explain', 'sec-similar', 'sec-perres'];
+            const sections = ['sec-summary', 'sec-actions', 'sec-capa', 'sec-explain', 'sec-perres'];
             const content = document.getElementById('res-content');
             if (!content) return;
 
