@@ -3596,94 +3596,54 @@
             (function() {
                 const incs = d.similar_incidents;
                 if (!incs || !incs.length) return;
-
                 const pred_rc  = d.root_cause  || '';
                 const pred_sev = d.severity    || '';
                 const k        = incs.length;
-
-                // Counts
                 const rc_agree  = incs.filter(function(i){ return i.root_cause === pred_rc; }).length;
                 const sev_agree = incs.filter(function(i){ return i.severity   === pred_sev; }).length;
                 const rc_pct    = Math.round(rc_agree  / k * 100);
                 const sev_pct   = Math.round(sev_agree / k * 100);
-
-                // Similarity spread
                 const sims    = incs.map(function(i){ return parseFloat(i.similarity) || 0; });
                 const top_sim = Math.max.apply(null, sims);
                 const bot_sim = Math.min.apply(null, sims);
                 const spread  = Math.round(top_sim - bot_sim);
-
-                // Colour class helpers
-                function cls(pct) {
-                    return pct >= 80 ? 'great' : pct >= 60 ? 'good' : pct >= 40 ? 'warn' : 'poor';
-                }
-                function simCls(v) {
-                    return v >= 80 ? 'great' : v >= 65 ? 'good' : v >= 50 ? 'warn' : 'poor';
-                }
-                function spreadCls(v) {
-                    return v <= 10 ? 'great' : v <= 20 ? 'good' : v <= 30 ? 'warn' : 'poor';
-                }
-
-                // Fill tile values
-                var rcEl = document.getElementById('pr-rc-val');
-                if (rcEl) { rcEl.textContent = rc_agree + '/5'; rcEl.className = 'ptile-val ' + cls(rc_pct); }
-
-                var svEl = document.getElementById('pr-sev-val');
-                if (svEl) { svEl.textContent = sev_agree + '/5'; svEl.className = 'ptile-val ' + cls(sev_pct); }
-
-                var smEl = document.getElementById('pr-sim-val');
-                if (smEl) { smEl.textContent = top_sim.toFixed(1) + '%'; smEl.className = 'ptile-val ' + simCls(top_sim); }
-
-                var spEl = document.getElementById('pr-spread-val');
-                if (spEl) { spEl.textContent = spread + '%'; spEl.className = 'ptile-val ' + spreadCls(spread); }
-
-                // Tile sub-text
-                set('pr-rc-what',
-                    rc_agree === k ? 'All ' + k + ' retrieved incidents agree — strong signal' :
-                    rc_agree + ' of ' + k + ' agree on root cause');
-                set('pr-sev-what',
-                    sev_agree === k ? 'All ' + k + ' agree on severity' :
-                    sev_agree + ' of ' + k + ' agree on severity · lower agreement is normal');
-                set('pr-spread-what',
-                    spread <= 10 ? 'Very tight cluster — all 5 matches are equally strong' :
-                    spread <= 20 ? 'Moderate spread — top matches are reliable' :
-                                   'Wide spread — only the top 1-2 matches are strong');
-
-                // Agreement bar counts
-                set('pr-rc-count',  rc_agree  + ' / ' + k + '  (' + rc_pct  + '%)');
-                set('pr-sev-count', sev_agree + ' / ' + k + '  (' + sev_pct + '%)');
-
-                set('pr-rc-explain',
-                    'Each of the ' + k + ' retrieved incidents was checked: does its root cause match "' +
-                    pred_rc + '"? ' + rc_agree + ' matched. Majority vote used this to classify your incident.');
-
-                set('pr-sev-explain',
-                    'Each of the ' + k + ' retrieved incidents was checked: does its severity match "' +
-                    pred_sev + '"? ' + sev_agree + ' matched. Severity accuracy is typically lower ' +
-                    'because it is an administrative label not described in the incident text.');
-
-                // Animate bars
-                setTimeout(function() {
-                    var rcBar  = document.getElementById('pr-rc-bar');
-                    var sevBar = document.getElementById('pr-sev-bar');
-                    if (rcBar)  { rcBar.style.width  = rc_pct  + '%'; rcBar.className  = 'abar-fill ' + cls(rc_pct); }
-                    if (sevBar) { sevBar.style.width = sev_pct + '%'; sevBar.className = 'abar-fill ' + cls(sev_pct); }
-                }, 200);
-
-                // Retrieved incident breakdown rows
-                var bd = document.getElementById('pr-breakdown');
-                if (bd) {
-                    bd.innerHTML = incs.map(function(inc, i) {
-                        var rcOk  = inc.root_cause === pred_rc;
-                        var sevOk = inc.severity   === pred_sev;
-                        var sim   = (parseFloat(inc.similarity) || 0).toFixed(1);
+                function cls(pct){ return pct>=80?'great':pct>=60?'good':pct>=40?'warn':'poor'; }
+                function simCls(v){ return v>=80?'great':v>=65?'good':v>=50?'warn':'poor'; }
+                function spreadCls(v){ return v<=10?'great':v<=20?'good':v<=30?'warn':'poor'; }
+                var rcEl=document.getElementById('pr-rc-val');
+                if(rcEl){rcEl.textContent=rc_agree+'/5';rcEl.className='ptile-val '+cls(rc_pct);}
+                var svEl=document.getElementById('pr-sev-val');
+                if(svEl){svEl.textContent=sev_agree+'/5';svEl.className='ptile-val '+cls(sev_pct);}
+                var smEl=document.getElementById('pr-sim-val');
+                if(smEl){smEl.textContent=top_sim.toFixed(1)+'%';smEl.className='ptile-val '+simCls(top_sim);}
+                var spEl=document.getElementById('pr-spread-val');
+                if(spEl){spEl.textContent=spread+'%';spEl.className='ptile-val '+spreadCls(spread);}
+                set('pr-rc-what', rc_agree===k?'All '+k+' retrieved incidents agree — strong signal':rc_agree+' of '+k+' agree on root cause');
+                set('pr-sev-what', sev_agree===k?'All '+k+' agree on severity':sev_agree+' of '+k+' agree on severity · lower agreement is normal');
+                set('pr-spread-what', spread<=10?'Very tight cluster — all 5 matches equally strong':spread<=20?'Moderate spread — top matches are reliable':'Wide spread — only top 1-2 matches are strong');
+                set('pr-rc-count',  rc_agree+' / '+k+'  ('+rc_pct+'%)');
+                set('pr-sev-count', sev_agree+' / '+k+'  ('+sev_pct+'%)');
+                set('pr-rc-explain','Each of the '+k+' retrieved incidents: does root cause match "'+pred_rc+'"? '+rc_agree+' matched.');
+                set('pr-sev-explain','Each of the '+k+' retrieved incidents: does severity match "'+pred_sev+'"? '+sev_agree+' matched. Lower severity agreement is normal — severity is an administrative label not in the text.');
+                setTimeout(function(){
+                    var rcBar=document.getElementById('pr-rc-bar');
+                    var sevBar=document.getElementById('pr-sev-bar');
+                    if(rcBar){rcBar.style.width=rc_pct+'%';rcBar.className='abar-fill '+cls(rc_pct);}
+                    if(sevBar){sevBar.style.width=sev_pct+'%';sevBar.className='abar-fill '+cls(sev_pct);}
+                },200);
+                var bd=document.getElementById('pr-breakdown');
+                if(bd){
+                    bd.innerHTML=incs.map(function(inc,i){
+                        var rcOk=inc.root_cause===pred_rc;
+                        var sevOk=inc.severity===pred_sev;
+                        var sim=(parseFloat(inc.similarity)||0).toFixed(1);
                         return '<div class="brow">'
-                            + '<span class="brow-rank">#' + (i+1) + '</span>'
-                            + '<span class="brow-text">' + x(t(inc.incident, 88)) + '</span>'
-                            + '<span class="brow-tag ' + (rcOk  ? 'match' : 'nomatch') + '">' + x(inc.root_cause) + '</span>'
-                            + '<span class="brow-tag ' + (sevOk ? 'match' : 'nomatch') + '">' + x(inc.severity)   + '</span>'
-                            + '<span class="brow-sim">' + sim + '%</span>'
-                            + '</div>';
+                            +'<span class="brow-rank">#'+(i+1)+'</span>'
+                            +'<span class="brow-text">'+x(t(inc.incident,88))+'</span>'
+                            +'<span class="brow-tag '+(rcOk?'match':'nomatch')+'">'+x(inc.root_cause)+'</span>'
+                            +'<span class="brow-tag '+(sevOk?'match':'nomatch')+'">'+x(inc.severity)+'</span>'
+                            +'<span class="brow-sim">'+sim+'%</span>'
+                            +'</div>';
                     }).join('');
                 }
             })();
@@ -3772,13 +3732,10 @@
                 clearForm();
                 showToast('✓ CAPA record saved successfully!', 'success');
             } catch (e) {
-                // If backend endpoint doesn't exist yet, still show success for demo
-                if (e.message === 'Failed to fetch' || e.message.includes('404')) {
-                    closeModal();
-                    clearForm();
-                    showToast('✓ Record saved! (connect backend /add_record endpoint to persist)', 'success');
+                if (e.message === 'Failed to fetch') {
+                    showToast('Cannot reach backend. Check API status.', 'error');
                 } else {
-                    showToast(e.message, 'error');
+                    showToast('Error: ' + e.message, 'error');
                 }
             } finally {
                 btn.disabled = false;
@@ -3809,7 +3766,7 @@
             const el = document.getElementById('api-pill');
             try {
                 const r = await fetch(API + '/health', {
-                    signal: AbortSignal.timeout(3000)
+                    signal: AbortSignal.timeout(15000)
                 });
                 if (r.ok) {
                     el.className = 'npill on';
@@ -3845,6 +3802,15 @@
         checkApi();
         setInterval(checkApi, 30000);
         setTimeout(() => document.getElementById('home-input').focus(), 300);
+
+        // ── KEEP HF SPACE ALIVE ──────────────────────────
+        function keepAlive() {
+            fetch(API + '/health', { signal: AbortSignal.timeout(5000) })
+                .catch(function() {});
+        }
+        setInterval(keepAlive, 10 * 60 * 1000);
+        keepAlive();
+
     </script>
 
     <!-- Chart.js -->
